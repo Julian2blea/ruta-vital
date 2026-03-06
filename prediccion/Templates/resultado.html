@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resultados del Cuestionario</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'styles.css' %}">
+</head>
+<body>
+
+<div class="resultado-container">
+    <h1> Resultados del Cuestionario de Salud</h1>
+    
+    <div class="info">
+        <h2> Nombre: {{ nombre }}</h2>
+    </div>
+
+    <div class="section">
+        <h3> Enfermedades Predichas</h3>
+        <ul>
+            {% for enfermedad in enfermedades %}
+                <li> {{ enfermedad }}</li>
+            {% empty %}
+                <li> No se predijeron enfermedades</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="section">
+        <h3> Clasificación de Riesgo</h3>
+        <p class="riesgo">{{ resultado }}</p>
+    </div>
+
+    <div class="section">
+        <h3>Recomendaciones</h3>
+        <ul>
+            {% for recomendacion in recomendaciones %}
+                <li>{{ recomendacion.texto }}</li>
+            {% empty %}
+                <li>No hay recomendaciones específicas</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="boton-salida">
+    <button class="btn salir-btn" onclick="window.location.href='/login/'">Salir</button>
+</div>
+
+</div>
+
+</body>
+</html>

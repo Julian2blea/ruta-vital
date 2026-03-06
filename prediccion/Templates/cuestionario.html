@@ -1,0 +1,427 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuestionario de Salud - Ruta Vital</title>
+    <link rel="stylesheet" href="{% static 'cuestionariostyle.css' %}">
+</head>
+<body>
+    <div class="container">
+        
+        <div class="header">
+            <h1> Cuestionario de Salud</h1>
+            <p>Completa todos los campos para recibir tu evaluación personalizada</p>
+        </div>
+
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar" style="width: 25%"></div>
+        </div>
+        <div class="progress-text">
+            <span id="progressText">Paso 1 de 4</span>
+        </div>
+
+        <div class="form-card">
+            <form method="post" id="formulario" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="ya_avisado" value="false">
+
+                <div class="step active" id="step1">
+                    <h2 class="step-title"> Información General</h2>
+                    
+                    <div class="form-group">
+                        <label class="main-label">Nombre completo</label>
+                        <input type="text" name="nombre" class="form-control" required 
+                               placeholder="Ingresa tu nombre completo">
+                        {% if form.nombre.errors %}
+                            <span class="error">{{ form.nombre.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label class="main-label">Edad</label>
+                        <input type="number" name="edad" class="form-control" required 
+                               min="5" max="120" placeholder="Tu edad en años">
+                        {% if form.edad.errors %}
+                            <span class="error">{{ form.edad.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label class="main-label">Sexo</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="sexo" value="H" required>
+                                <span class="radio-label">Hombre</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="sexo" value="M">
+                                <span class="radio-label">Mujer</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="sexo" value="O">
+                                <span class="radio-label">Otro</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="main-label">Peso (kg)</label>
+                        <input type="number" name="peso" step="0.1" class="form-control" required 
+                               min="25" max="300" placeholder="Ej: 65.5">
+                        {% if form.peso.errors %}
+                            <span class="error">{{ form.peso.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label class="main-label">Estatura (cm)</label>
+                        <input type="number" name="estatura" step="0.1" class="form-control" required 
+                               min="80" max="250" placeholder="Ej: 170">
+                        {% if form.estatura.errors %}
+                            <span class="error">{{ form.estatura.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label class="main-label">¿Tienes antecedentes familiares cercanos (padres/hermanos) de enfermedades crónicas? (Selecciona todas las que correspondan)</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-option">
+                                <input type="checkbox" name="antecedentes_familiares" value="diabetes">
+                                <span class="checkbox-label">Diabetes tipo 2</span>
+                            </label>
+                            <label class="checkbox-option">
+                                <input type="checkbox" name="antecedentes_familiares" value="hipertension">
+                                <span class="checkbox-label">Hipertensión</span>
+                            </label>
+                            <label class="checkbox-option">
+                                <input type="checkbox" name="antecedentes_familiares" value="cardiovascular">
+                                <span class="checkbox-label">Enfermedades cardiovasculares</span>
+                            </label>
+                            <label class="checkbox-option">
+                                <input type="checkbox" name="antecedentes_familiares" value="colesterol">
+                                <span class="checkbox-label">Colesterol alto / Hipercolesterolemia</span>
+                            </label>
+                            <label class="checkbox-option">
+                                <input type="checkbox" name="antecedentes_familiares" value="ninguno">
+                                <span class="checkbox-label">No tengo antecedentes familiares</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step" id="step2">
+                    <h2 class="step-title"> Hábitos Alimenticios</h2>
+                    
+                    <div class="form-group">
+                        <label class="main-label">¿Con qué frecuencia consumes alimentos ultraprocesados? (Ej: snacks, comida rápida, productos empacados)</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="consumo_ultraprocesados" value="N" required>
+                                <span class="radio-label">Nunca</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="consumo_ultraprocesados" value="1-2">
+                                <span class="radio-label">1-2 veces por semana</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="consumo_ultraprocesados" value="3-5">
+                                <span class="radio-label">3-5 veces por semana</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="consumo_ultraprocesados" value="A">
+                                <span class="radio-label">A diario</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="main-label">¿Consumes frutas y verduras diariamente?</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="consumo_frutas_verduras" value="S" required>
+                                <span class="radio-label">Sí</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="consumo_frutas_verduras" value="N">
+                                <span class="radio-label">No</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="main-label">¿Desayunas regularmente cada mañana?</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="desayuno_regular" value="S" required>
+                                <span class="radio-label">Sí</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="desayuno_regular" value="N">
+                                <span class="radio-label">No</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="main-label">¿Cuántas comidas principales haces al día? (Desayuno, almuerzo, cena)</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="comidas_principales" value="1" required>
+                                <span class="radio-label">1</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="comidas_principales" value="2">
+                                <span class="radio-label">2</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="comidas_principales" value="3">
+                                <span class="radio-label">3</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="main-label">¿Con qué frecuencia consumes bebidas azucaradas? (Ej: gaseosas, jugos artificiales)</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="bebidas_azucaradas" value="N" required>
+                                <span class="radio-label">Nunca</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="bebidas_azucaradas" value="R">
+                                <span class="radio-label">Rara vez</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="bebidas_azucaradas" value="V">
+                                <span class="radio-label">Varias veces por semana</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="bebidas_azucaradas" value="A">
+                                <span class="radio-label">A diario</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="main-label">¿Con qué frecuencia consumes alimentos con grasas saturadas? (Ej: fritos, embutidos, productos de pastelería)</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="consumo_grasas_saturadas" value="N" required>
+                                <span class="radio-label">Nunca</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="consumo_grasas_saturadas" value="R">
+                                <span class="radio-label">Rara vez</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="consumo_grasas_saturadas" value="V">
+                                <span class="radio-label">Varias veces por semana</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="consumo_grasas_saturadas" value="A">
+                                <span class="radio-label">A diario</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="main-label">¿Qué tan frecuente consumes productos integrales? (Ej: arroz integral, avena, pan integral)</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="consumo_integrales" value="S" required>
+                                <span class="radio-label">Siempre</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="consumo_integrales" value="A">
+                                <span class="radio-label">A veces</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="consumo_integrales" value="C">
+                                <span class="radio-label">Casi nunca</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="consumo_integrales" value="N">
+                                <span class="radio-label">Nunca</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step" id="step3">
+                    <h2 class="step-title"> Estilo de Vida</h2>
+                    
+                    <div class="form-group">
+                        <label class="main-label">¿Haces ejercicio regularmente?</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="ejercicio_regular" value="S" required>
+                                <span class="radio-label">Sí</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="ejercicio_regular" value="N">
+                                <span class="radio-label">No</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="main-label">¿Sufres de estrés crónico? (Estrés que persiste durante un largo período, como días o semanas)</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="estres_cronico" value="S" required>
+                                <span class="radio-label">Sí</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="estres_cronico" value="N">
+                                <span class="radio-label">No</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="main-label">¿Duermes como mínimo 7 horas diarias?</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="dormir_7_horas" value="S" required>
+                                <span class="radio-label">Sí</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="dormir_7_horas" value="N">
+                                <span class="radio-label">No</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step" id="step4">
+                    <h2 class="step-title"> Indicadores de Salud</h2>
+                    
+                    <div class="form-group">
+                        <label class="main-label">¿Has sufrido cambios de peso?</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="cambios_peso" value="S" required>
+                                <span class="radio-label">Sí, he subido</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="cambios_peso" value="B">
+                                <span class="radio-label">Sí, he bajado</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="cambios_peso" value="N">
+                                <span class="radio-label">No</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="main-label">¿Frecuentas sensación de debilidad física?</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="sensacion_debilidad" value="S" required>
+                                <span class="radio-label">Sí</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="sensacion_debilidad" value="N">
+                                <span class="radio-label">No</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="main-label">¿Padeces dolor estomacal frecuentemente?</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="dolor_estomacal" value="S" required>
+                                <span class="radio-label">Sí</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="dolor_estomacal" value="N">
+                                <span class="radio-label">No</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="main-label">¿Hace poco te has hecho exámenes de sangre?</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="examenes_sangre" value="T" required>
+                                <span class="radio-label">Sí, todos normales</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="examenes_sangre" value="A">
+                                <span class="radio-label">Sí, algunos alterados</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="examenes_sangre" value="N">
+                                <span class="radio-label">No me he hecho exámenes</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="button" class="btn btn-secondary" onclick="anterior()" id="btnAnterior" style="display:none;">
+                        ← Anterior
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="siguiente()" id="btnSiguiente">
+                        Siguiente →
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="btnEnviar" style="display:none;">
+                         Enviar Cuestionario
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let paso = 0;
+        const pasos = document.querySelectorAll('.step');
+        const totalPasos = pasos.length;
+        const btnAnterior = document.getElementById('btnAnterior');
+        const btnSiguiente = document.getElementById('btnSiguiente');
+        const btnEnviar = document.getElementById('btnEnviar');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+
+        function actualizarProgreso() {
+            const progreso = ((paso + 1) / totalPasos) * 100;
+            progressBar.style.width = progreso + '%';
+            progressText.textContent = `Paso ${paso + 1} de ${totalPasos}`;
+        }
+
+        function mostrarPaso(index) {
+            pasos.forEach((step, i) => {
+                step.classList.toggle('active', i === index);
+            });
+
+            btnAnterior.style.display = index === 0 ? 'none' : 'block';
+            btnSiguiente.style.display = index === totalPasos - 1 ? 'none' : 'block';
+            btnEnviar.style.display = index === totalPasos - 1 ? 'block' : 'none';
+            
+            actualizarProgreso();
+            window.scrollTo(0, 0);
+        }
+
+        function siguiente() {
+            if (paso < totalPasos - 1) {
+                paso++;
+                mostrarPaso(paso);
+            }
+        }
+
+        function anterior() {
+            if (paso > 0) {
+                paso--;
+                mostrarPaso(paso);
+            }
+        }
+
+        mostrarPaso(paso);
+    </script>
+</body>
+</html>

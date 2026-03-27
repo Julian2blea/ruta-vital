@@ -1,4 +1,4 @@
-#  Ruta Vital - Predicción de Salud
+#  Ruta Vital - Backend
 
 Plataforma web de predicción de enfermedades basada en análisis de hábitos alimenticios y estilo de vida.
 

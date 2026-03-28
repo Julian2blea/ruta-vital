@@ -1,4 +1,4 @@
-#  Ruta Vital - Backend
+#  Ruta Vital - Backend julian
 
 Plataforma web de predicción de enfermedades basada en análisis de hábitos alimenticios y estilo de vida.
 

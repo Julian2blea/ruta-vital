@@ -1,14 +1,9 @@
-
-from pathlib import Path
 import os
-import pymysql
-pymysql.install_as_MySQLdb()
+from pathlib import Path
 
-
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
+from django.contrib import messages
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
@@ -32,6 +27,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'prediccion',
+    'rest_framework',
+    'drf_yasg',
+    'django_filters',
 ]
 
 MIDDLEWARE = [
@@ -68,19 +66,19 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'ruta_vital_db',
+        'NAME': 'rutavital_db',
         'USER': 'root',
-        'PASSWORD': '',
+        'PASSWORD': 'julian0627',
         'HOST': 'localhost',
-        'PORT': '3307',
+        'PORT': '3306',
         'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
             'charset': 'utf8mb4',
         },
-        'DISABLE_SERVER_SIDE_CURSORS': True,
     }
 }
 
@@ -136,34 +134,21 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "prediccion", "static"),  
 ]
 
-import django
-from django.db.backends.mysql.base import DatabaseWrapper
-from django.db.backends.mysql import features
-
-# 1. Desactivar verificación de versión
-def bypass_check(self):
-    pass
-
-DatabaseWrapper.check_database_version_supported = bypass_check
-
-# 2. Desactivar características no soportadas en MariaDB 10.4
-class CustomDatabaseFeatures(features.DatabaseFeatures):
-    can_return_columns_from_insert = False
-    can_return_rows_from_bulk_insert = False
-    supports_table_check_constraints = False
-
-# Aplicar las características personalizadas
-DatabaseWrapper.features_class = CustomDatabaseFeatures
-
-# 3. Parche para evitar uso de RETURNING
-original_execute_sql = None
-
-def patched_execute_sql(self, returning_fields=None):
-    # Ignorar returning_fields y usar None
-    if original_execute_sql:
-        return original_execute_sql(self, None)
-    
-from django.db.models.sql import compiler
-if hasattr(compiler.SQLInsertCompiler, 'execute_sql'):
-    original_execute_sql = compiler.SQLInsertCompiler.execute_sql
-    compiler.SQLInsertCompiler.execute_sql = patched_execute_sql
+# ==========================================
+# DJANGO REST FRAMEWORK CONFIGURATION
+# ==========================================
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
+}

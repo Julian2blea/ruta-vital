@@ -71,7 +71,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'rutavital_db',
+        'NAME': 'prediccion_db',
         'USER': 'root',
         'PASSWORD': 'julian0627',
         'HOST': 'localhost',
@@ -152,3 +152,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
 }
+
+AUTH_USER_MODEL = 'prediccion.User'
+
+AUTHENTICATION_BACKENDS = ['django.contrib.auth.backends.ModelBackend']

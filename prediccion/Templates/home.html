@@ -3,18 +3,56 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Bienvenido</title>
+    <title>Inicio — Ruta Vital</title>
     <link rel="stylesheet" href="{% static 'styles.css' %}">
 </head>
 <body>
     <div class="container">
-        <h1>Bienvenido {{ user.username }}</h1>
+ 
+        <h1>Bienvenido, {{ user.person.first_name|default:user.login }}</h1>
+ 
         {% if user.is_authenticated %}
-            <a href="{% url 'cuestionario' %}" class="button">Ir al cuestionario</a>
-            <a href="{% url 'cerrar_sesion' %}" class="button danger">Cerrar sesión</a>
+ 
+            <div class="action-buttons">
+                <a href="{% url 'register_reading' %}" class="button">Registrar lectura de glucosa</a>
+                <a href="{% url 'history' %}" class="button">Ver historial</a>
+                <a href="{% url 'cerrar_sesion' %}" class="button danger">Cerrar sesión</a>
+            </div>
+ 
+            {% if readings %}
+                <h2>Últimas lecturas</h2>
+                <table class="readings-table">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Glucosa (mg/dL)</th>
+                            <th>Estado</th>
+                            <th>Contexto</th>
+                            <th>Detalle</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for reading in readings %}
+                        <tr>
+                            <td>{{ reading.reading_date|date:"d/m/Y H:i" }}</td>
+                            <td>{{ reading.glucose_value }}</td>
+                            <td>{{ reading.get_status_display }}</td>
+                            <td>{{ reading.get_context_display }}</td>
+                            <td>
+                                <a href="{% url 'reading_result' reading.pk %}">Ver</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>Aún no tienes lecturas registradas. ¡Registra tu primera lectura!</p>
+            {% endif %}
+ 
         {% else %}
             <a href="{% url 'login' %}" class="button success">Iniciar sesión</a>
         {% endif %}
+ 
     </div>
 </body>
 </html>

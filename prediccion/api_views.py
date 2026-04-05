@@ -1,189 +1,179 @@
-from rest_framework import viewsets, permissions, filters
+from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from django.contrib.auth.models import User
-
+ 
 from .models import (
-    PerfilUsuario, Encuesta, DatosSalud, HabitosAlimenticios,
-    EstiloVida, Sintomas, ResultadoEvaluacion
+    Person, User, Role, Permission,
+    UserHasRole, RoleHasPermission,
+    GlucoseReading, GlucoseRecommendation,
 )
 from .serializers import (
-    UserSerializer, PerfilUsuarioSerializer, EncuestaSerializer,
-    DatosSaludSerializer, HabitosAlimenticiosSerializer,
-    EstiloVidaSerializer, SintomasSerializer, ResultadoEvaluacionSerializer
+    PersonSerializer,
+    UserSerializer, UserCreateSerializer,
+    RoleSerializer, PermissionSerializer,
+    GlucoseReadingSerializer, GlucoseReadingCreateSerializer,
+    GlucoseHistorySerializer, GlucoseRecommendationSerializer,
 )
-
-
+from .views import build_recommendation
+ 
+ 
+# ─────────────────────────────────────────────
+# PERSON
+# ─────────────────────────────────────────────
+ 
+class PersonViewSet(viewsets.ModelViewSet):
+    """
+    GET    /api/persons/        - List all persons
+    POST   /api/persons/        - Create a person
+    GET    /api/persons/{id}/   - Retrieve a person
+    PUT    /api/persons/{id}/   - Full update
+    PATCH  /api/persons/{id}/   - Partial update
+    DELETE /api/persons/{id}/   - Delete
+    """
+    queryset = Person.objects.all()
+    serializer_class = PersonSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['first_name', 'last_name', 'email']
+    ordering_fields = ['id', 'last_name']
+    ordering = ['last_name']
+ 
+ 
+# ─────────────────────────────────────────────
+# USER
+# ─────────────────────────────────────────────
+ 
 class UserViewSet(viewsets.ModelViewSet):
     """
-    API endpoint para gestión de usuarios.
-    
-    GET /api/usuarios/ - Listar todos los usuarios
-    POST /api/usuarios/ - Crear nuevo usuario
-    GET /api/usuarios/{id}/ - Obtener usuario específico
-    PUT /api/usuarios/{id}/ - Actualizar usuario completo
-    PATCH /api/usuarios/{id}/ - Actualizar usuario parcial
-    DELETE /api/usuarios/{id}/ - Eliminar usuario
+    GET    /api/users/          - List all users
+    POST   /api/users/          - Create a user
+    GET    /api/users/{id}/     - Retrieve a user
+    PUT    /api/users/{id}/     - Full update
+    PATCH  /api/users/{id}/     - Partial update
+    DELETE /api/users/{id}/     - Delete
+ 
+    GET    /api/users/me/       - Current authenticated user
     """
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
+    queryset = User.objects.all().select_related('person').prefetch_related('roles')
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['username', 'email', 'first_name', 'last_name']
-    ordering_fields = ['id', 'username', 'date_joined']
+    search_fields = ['login', 'person__first_name', 'person__last_name']
+    ordering_fields = ['id', 'date_joined']
     ordering = ['-date_joined']
-
-
-class PerfilUsuarioViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint para gestión de perfiles de usuario.
-    
-    GET /api/perfiles/ - Listar todos los perfiles
-    POST /api/perfiles/ - Crear nuevo perfil
-    GET /api/perfiles/{id}/ - Obtener perfil específico
-    PUT /api/perfiles/{id}/ - Actualizar perfil completo
-    PATCH /api/perfiles/{id}/ - Actualizar perfil parcial
-    DELETE /api/perfiles/{id}/ - Eliminar perfil
-    """
-    queryset = PerfilUsuario.objects.all()
-    serializer_class = PerfilUsuarioSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['usuario']
-    ordering_fields = ['id', 'fecha_registro']
-    ordering = ['-fecha_registro']
-
-
-class EncuestaViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint para gestión de encuestas.
-    
-    GET /api/encuestas/ - Listar todas las encuestas
-    POST /api/encuestas/ - Crear nueva encuesta
-    GET /api/encuestas/{id}/ - Obtener encuesta específica
-    PUT /api/encuestas/{id}/ - Actualizar encuesta completa
-    PATCH /api/encuestas/{id}/ - Actualizar encuesta parcial
-    DELETE /api/encuestas/{id}/ - Eliminar encuesta
-    """
-    queryset = Encuesta.objects.all()
-    serializer_class = EncuestaSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['usuario']
-    ordering_fields = ['id', 'fecha_creacion']
-    ordering = ['-fecha_creacion']
-    
-    @action(detail=False, methods=['get'])
-    def mis_encuestas(self, request):
-        """
-        Endpoint personalizado para obtener encuestas del usuario actual.
-        GET /api/encuestas/mis_encuestas/
-        """
-        if not request.user.is_authenticated:
-            return Response({"detail": "Autenticación requerida."}, status=401)
-        
-        encuestas = self.queryset.filter(usuario=request.user)
-        serializer = self.get_serializer(encuestas, many=True)
+ 
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return UserCreateSerializer
+        return UserSerializer
+ 
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def me(self, request):
+        """Returns the currently authenticated user."""
+        serializer = UserSerializer(request.user)
         return Response(serializer.data)
-
-
-class DatosSaludViewSet(viewsets.ModelViewSet):
+ 
+ 
+# ─────────────────────────────────────────────
+# ROLE
+# ─────────────────────────────────────────────
+ 
+class RoleViewSet(viewsets.ModelViewSet):
     """
-    API endpoint para gestión de datos de salud.
-    
-    GET /api/datos-salud/ - Listar todos los datos de salud
-    POST /api/datos-salud/ - Crear nuevos datos de salud
-    GET /api/datos-salud/{id}/ - Obtener datos de salud específicos
-    PUT /api/datos-salud/{id}/ - Actualizar datos de salud completos
-    PATCH /api/datos-salud/{id}/ - Actualizar datos de salud parciales
-    DELETE /api/datos-salud/{id}/ - Eliminar datos de salud
+    GET    /api/roles/          - List all roles
+    POST   /api/roles/          - Create a role
+    GET    /api/roles/{id}/     - Retrieve a role
+    PUT    /api/roles/{id}/     - Full update
+    PATCH  /api/roles/{id}/     - Partial update
+    DELETE /api/roles/{id}/     - Delete
     """
-    queryset = DatosSalud.objects.all()
-    serializer_class = DatosSaludSerializer
+    queryset = Role.objects.all().prefetch_related('permissions')
+    serializer_class = RoleSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['encuesta', 'sexo', 'edad']
-    search_fields = ['nombre']
-    ordering_fields = ['id', 'edad', 'imc']
-    ordering = ['-id']
-
-
-class HabitosAlimenticiosViewSet(viewsets.ModelViewSet):
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['description']
+    ordering_fields = ['id', 'description']
+    ordering = ['description']
+ 
+ 
+# ─────────────────────────────────────────────
+# PERMISSION
+# ─────────────────────────────────────────────
+ 
+class PermissionViewSet(viewsets.ModelViewSet):
     """
-    API endpoint para gestión de hábitos alimenticios.
-    
-    GET /api/habitos/ - Listar todos los hábitos
-    POST /api/habitos/ - Crear nuevos hábitos
-    GET /api/habitos/{id}/ - Obtener hábitos específicos
-    PUT /api/habitos/{id}/ - Actualizar hábitos completos
-    PATCH /api/habitos/{id}/ - Actualizar hábitos parciales
-    DELETE /api/habitos/{id}/ - Eliminar hábitos
+    GET    /api/permissions/        - List all permissions
+    POST   /api/permissions/        - Create a permission
+    GET    /api/permissions/{id}/   - Retrieve a permission
+    PUT    /api/permissions/{id}/   - Full update
+    PATCH  /api/permissions/{id}/   - Partial update
+    DELETE /api/permissions/{id}/   - Delete
     """
-    queryset = HabitosAlimenticios.objects.all()
-    serializer_class = HabitosAlimenticiosSerializer
+    queryset = Permission.objects.all()
+    serializer_class = PermissionSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['description']
+    ordering_fields = ['id', 'description']
+    ordering = ['description']
+ 
+ 
+# ─────────────────────────────────────────────
+# GLUCOSE READING
+# ─────────────────────────────────────────────
+ 
+class GlucoseReadingViewSet(viewsets.ModelViewSet):
+    """
+    GET    /api/readings/               - List readings of current user
+    POST   /api/readings/               - Register a new reading (auto-generates recommendation)
+    GET    /api/readings/{id}/          - Retrieve a reading with its recommendation
+    DELETE /api/readings/{id}/          - Delete a reading
+ 
+    GET    /api/readings/history/       - Lightweight list for charts/history
+    GET    /api/readings/my_readings/   - Alias for filtered list
+    """
+    permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['encuesta', 'consume_frutas_verduras', 'desayuna_regularmente']
-    ordering_fields = ['id']
-    ordering = ['-id']
-
-
-class EstiloVidaViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint para gestión de estilo de vida.
-    
-    GET /api/estilo-vida/ - Listar todos los estilos de vida
-    POST /api/estilo-vida/ - Crear nuevo estilo de vida
-    GET /api/estilo-vida/{id}/ - Obtener estilo de vida específico
-    PUT /api/estilo-vida/{id}/ - Actualizar estilo de vida completo
-    PATCH /api/estilo-vida/{id}/ - Actualizar estilo de vida parcial
-    DELETE /api/estilo-vida/{id}/ - Eliminar estilo de vida
-    """
-    queryset = EstiloVida.objects.all()
-    serializer_class = EstiloVidaSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['encuesta', 'ejercicio_regular', 'estres_cronico', 'duerme_bien']
-    ordering_fields = ['id']
-    ordering = ['-id']
-
-
-class SintomasViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint para gestión de síntomas.
-    
-    GET /api/sintomas/ - Listar todos los síntomas
-    POST /api/sintomas/ - Crear nuevos síntomas
-    GET /api/sintomas/{id}/ - Obtener síntomas específicos
-    PUT /api/sintomas/{id}/ - Actualizar síntomas completos
-    PATCH /api/sintomas/{id}/ - Actualizar síntomas parciales
-    DELETE /api/sintomas/{id}/ - Eliminar síntomas
-    """
-    queryset = Sintomas.objects.all()
-    serializer_class = SintomasSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['encuesta', 'fatiga_frecuente', 'problemas_digestivos']
-    ordering_fields = ['id']
-    ordering = ['-id']
-
-
-class ResultadoEvaluacionViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint para gestión de resultados de evaluación.
-    
-    GET /api/resultados/ - Listar todos los resultados
-    POST /api/resultados/ - Crear nuevo resultado
-    GET /api/resultados/{id}/ - Obtener resultado específico
-    PUT /api/resultados/{id}/ - Actualizar resultado completo
-    PATCH /api/resultados/{id}/ - Actualizar resultado parcial
-    DELETE /api/resultados/{id}/ - Eliminar resultado
-    """
-    queryset = ResultadoEvaluacion.objects.all()
-    serializer_class = ResultadoEvaluacionSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['encuesta', 'nivel_riesgo']
-    ordering_fields = ['id', 'puntaje_riesgo']
-    ordering = ['-id']
+    filterset_fields = ['status', 'context', 'source']
+    ordering_fields = ['id', 'reading_date', 'glucose_value']
+    ordering = ['-reading_date']
+ 
+    def get_queryset(self):
+        """Each user only sees their own readings."""
+        return GlucoseReading.objects.filter(
+            user=self.request.user
+        ).select_related('recommendation')
+ 
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return GlucoseReadingCreateSerializer
+        if self.action == 'history':
+            return GlucoseHistorySerializer
+        return GlucoseReadingSerializer
+ 
+    def perform_create(self, serializer):
+        """Save the reading and auto-generate its recommendation."""
+        reading = serializer.save(user=self.request.user)
+        rec_data = build_recommendation(reading)
+        GlucoseRecommendation.objects.create(reading=reading, **rec_data)
+ 
+    @action(detail=False, methods=['get'])
+    def history(self, request):
+        """
+        Lightweight endpoint for the chart / history screen.
+        GET /api/readings/history/
+        """
+        readings = self.get_queryset()
+        serializer = GlucoseHistorySerializer(readings, many=True)
+        return Response(serializer.data)
+ 
+    @action(detail=False, methods=['get'])
+    def my_readings(self, request):
+        """
+        Full reading list with recommendations for the current user.
+        GET /api/readings/my_readings/
+        """
+        readings = self.get_queryset()
+        serializer = GlucoseReadingSerializer(readings, many=True)
+        return Response(serializer.data)
+ 

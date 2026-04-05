@@ -3,18 +3,41 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Registrarse</title>
+    <title>Registrarse — Ruta Vital</title>
     <link rel="stylesheet" href="{% static 'styles.css' %}">
 </head>
 <body>
     <div class="register-container">
-        <h2>Registrarse</h2>
-        <form method="post">
+        <h2>Crear cuenta</h2>
+ 
+        <form method="post" novalidate>
             {% csrf_token %}
-            {{ form.as_p }}
+ 
+            {% for field in form %}
+                <div class="form-group">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                        {% for error in field.errors %}
+                            <span class="field-error">{{ error }}</span>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            {% endfor %}
+ 
+            {% if form.non_field_errors %}
+                <div class="error-message">
+                    {% for error in form.non_field_errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+ 
             <button type="submit">Crear cuenta</button>
         </form>
+ 
         <div class="register-link">
+            <p>¿Ya tienes cuenta? <a href="{% url 'login' %}">Iniciar sesión</a></p>
         </div>
     </div>
 </body>

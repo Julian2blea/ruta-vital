@@ -1,103 +1,139 @@
 from rest_framework import serializers
-from django.contrib.auth.models import User
 from .models import (
-    PerfilUsuario, Encuesta, DatosSalud, HabitosAlimenticios,
-    EstiloVida, Sintomas, ResultadoEvaluacion
+    Person, User, Role, Permission,
+    UserHasRole, RoleHasPermission,
+    GlucoseReading, GlucoseRecommendation,
 )
-
-
+ 
+ 
+# ─────────────────────────────────────────────
+# PERSON
+# ─────────────────────────────────────────────
+ 
+class PersonSerializer(serializers.ModelSerializer):
+ 
+    class Meta:
+        model  = Person
+        fields = ['id', 'first_name', 'last_name', 'birth_date', 'gender', 'phone', 'email']
+        read_only_fields = ['id']
+ 
+ 
+# ─────────────────────────────────────────────
+# PERMISSION & ROLE
+# ─────────────────────────────────────────────
+ 
+class PermissionSerializer(serializers.ModelSerializer):
+ 
+    class Meta:
+        model  = Permission
+        fields = ['id', 'description']
+        read_only_fields = ['id']
+ 
+ 
+class RoleSerializer(serializers.ModelSerializer):
+    permissions = PermissionSerializer(many=True, read_only=True)
+ 
+    class Meta:
+        model  = Role
+        fields = ['id', 'description', 'permissions']
+        read_only_fields = ['id']
+ 
+ 
+# ─────────────────────────────────────────────
+# USER
+# ─────────────────────────────────────────────
+ 
 class UserSerializer(serializers.ModelSerializer):
-    """Serializer para el modelo User"""
-    
+    person = PersonSerializer(read_only=True)
+    roles  = RoleSerializer(many=True, read_only=True)
+ 
     class Meta:
-        model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'date_joined']
+        model  = User
+        fields = ['id', 'login', 'person', 'roles', 'is_active', 'date_joined']
         read_only_fields = ['id', 'date_joined']
-
-
-class PerfilUsuarioSerializer(serializers.ModelSerializer):
-    """Serializer para PerfilUsuario"""
-    usuario = UserSerializer(read_only=True)
-    
+ 
+ 
+class UserCreateSerializer(serializers.ModelSerializer):
+    """Se utilizara unicamente para el registro; acepta contraseña en texto plano"""
+    password = serializers.CharField(write_only=True, min_length=6)
+ 
     class Meta:
-        model = PerfilUsuario
-        fields = ['id', 'usuario', 'fecha_registro']
-        read_only_fields = ['id', 'fecha_registro']
-
-
-class DatosSaludSerializer(serializers.ModelSerializer):
-    """Serializer para DatosSalud"""
-    
+        model  = User
+        fields = ['login', 'password']
+ 
+    def create(self, validated_data):
+        return User.objects.create_user(
+            login=validated_data['login'],
+            password=validated_data['password'],
+        )
+ 
+ 
+# ─────────────────────────────────────────────
+# GLUCOSE
+# ─────────────────────────────────────────────
+ 
+class GlucoseRecommendationSerializer(serializers.ModelSerializer):
+ 
     class Meta:
-        model = DatosSalud
+        model  = GlucoseRecommendation
         fields = [
-            'id', 'encuesta', 'nombre', 'edad', 'sexo', 
-            'peso', 'estatura', 'imc', 'antecedentes_familiares'
+            'id',
+            'immediate_action',
+            'additional_advice',
+            'when_to_measure',
+            'medical_warning',
+            'generated_at',
         ]
-        read_only_fields = ['id']
-
-
-class HabitosAlimenticiosSerializer(serializers.ModelSerializer):
-    """Serializer para HabitosAlimenticios"""
-    
+        read_only_fields = fields
+ 
+ 
+class GlucoseReadingSerializer(serializers.ModelSerializer):
+    """Lectura — incluye recomendaciones anidadas. Se usa para GET detallados."""
+    recommendation = GlucoseRecommendationSerializer(read_only=True)
+    user           = UserSerializer(read_only=True)
+ 
     class Meta:
-        model = HabitosAlimenticios
+        model  = GlucoseReading
         fields = [
-            'id', 'encuesta', 'frecuencia_ultraprocesados', 
-            'consume_frutas_verduras', 'desayuna_regularmente',
-            'numero_comidas', 'frecuencia_bebidas_azucaradas',
-            'frecuencia_grasa_saturada', 'consumo_integrales'
+            'id',
+            'user',
+            'glucose_value',
+            'status',
+            'context',
+            'source',
+            'notes',
+            'reading_date',
+            'recommendation',
         ]
-        read_only_fields = ['id']
-
-
-class EstiloVidaSerializer(serializers.ModelSerializer):
-    """Serializer para EstiloVida"""
-    
+        read_only_fields = ['id', 'status', 'reading_date', 'user', 'recommendation']
+ 
+ 
+class GlucoseReadingCreateSerializer(serializers.ModelSerializer):
+    """Usado para POST — Solo los campos que envía el usuario."""
+ 
     class Meta:
-        model = EstiloVida
-        fields = ['id', 'encuesta', 'ejercicio_regular', 'estres_cronico', 'duerme_bien']
-        read_only_fields = ['id']
-
-
-class SintomasSerializer(serializers.ModelSerializer):
-    """Serializer para Sintomas"""
-    
+        model  = GlucoseReading
+        fields = ['glucose_value', 'context', 'source', 'notes']
+ 
+    def validate_glucose_value(self, value):
+        if value < 20 or value > 600:
+            raise serializers.ValidationError(
+                "Glucose value must be between 20 and 600 mg/dL."
+            )
+        return value
+ 
+ 
+class GlucoseHistorySerializer(serializers.ModelSerializer):
+    """Serializador ligero para list/history — no recomendaciones anidadas."""
+ 
     class Meta:
-        model = Sintomas
+        model  = GlucoseReading
         fields = [
-            'id', 'encuesta', 'cambios_peso', 'fatiga_frecuente',
-            'problemas_digestivos', 'examenes_sangre'
+            'id',
+            'glucose_value',
+            'status',
+            'context',
+            'source',
+            'reading_date',
         ]
-        read_only_fields = ['id']
-
-
-class ResultadoEvaluacionSerializer(serializers.ModelSerializer):
-    """Serializer para ResultadoEvaluacion"""
-    
-    class Meta:
-        model = ResultadoEvaluacion
-        fields = [
-            'id', 'encuesta', 'enfermedades_detectadas',
-            'nivel_riesgo', 'puntaje_riesgo', 'recomendaciones'
-        ]
-        read_only_fields = ['id']
-
-
-class EncuestaSerializer(serializers.ModelSerializer):
-    """Serializer para Encuesta con relaciones anidadas"""
-    usuario = UserSerializer(read_only=True)
-    datos_salud = DatosSaludSerializer(many=True, read_only=True)
-    habitos = HabitosAlimenticiosSerializer(many=True, read_only=True)
-    estilo_vida = EstiloVidaSerializer(many=True, read_only=True)
-    sintomas = SintomasSerializer(many=True, read_only=True)
-    resultados = ResultadoEvaluacionSerializer(many=True, read_only=True)
-    
-    class Meta:
-        model = Encuesta
-        fields = [
-            'id', 'usuario', 'fecha_creacion',
-            'datos_salud', 'habitos', 'estilo_vida',
-            'sintomas', 'resultados'
-        ]
-        read_only_fields = ['id', 'fecha_creacion']
+        read_only_fields = fields

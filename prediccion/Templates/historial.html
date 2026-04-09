@@ -1,0 +1,85 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historial de Glucosa — Ruta Vital</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+<div class="container">
+ 
+    <div class="card">
+        <div class="page-header">
+            <h1>Historial de Lecturas</h1>
+            <a href="{% url 'register_reading' %}" class="button">+ Nueva lectura</a>
+        </div>
+ 
+        {% if readings %}
+ 
+            <div class="stats-row">
+                <div class="stat-box">
+                    <span class="stat-value">{{ readings|length }}</span>
+                    <span class="stat-label">Total lecturas</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-value">{{ readings.0.glucose_value }} mg/dL</span>
+                    <span class="stat-label">Última lectura</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-value">{{ readings.0.reading_date|date:"d/m/Y" }}</span>
+                    <span class="stat-label">Fecha última</span>
+                </div>
+            </div>
+ 
+            <table class="readings-table">
+                <thead>
+                    <tr>
+                        <th>Fecha y hora</th>
+                        <th>Glucosa (mg/dL)</th>
+                        <th>Estado</th>
+                        <th>Contexto</th>
+                        <th>Fuente</th>
+                        <th>Detalle</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reading in readings %}
+                    <tr class="row-{{ reading.status }}">
+                        <td>{{ reading.reading_date|date:"d/m/Y H:i" }}</td>
+                        <td><strong>{{ reading.glucose_value }}</strong></td>
+                        <td>
+                            <span class="status-pill status-{{ reading.status }}">
+                                {% if reading.status == 'hypoglycemia' %}⚠️ Hipoglucemia
+                                {% elif reading.status == 'normal' %}✅ Normal
+                                {% elif reading.status == 'prediabetes' %}🟡 Prediabetes
+                                {% elif reading.status == 'high_glucose' %}🔴 Glucosa Alta
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td>{{ reading.get_context_display }}</td>
+                        <td>{{ reading.get_source_display }}</td>
+                        <td>
+                            <a href="{% url 'reading_result' reading.pk %}" class="link-detail">Ver</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+ 
+        {% else %}
+            <div class="empty-state">
+                <p>Aún no tienes lecturas registradas.</p>
+                <a href="{% url 'register_reading' %}" class="button">Registrar primera lectura</a>
+            </div>
+        {% endif %}
+ 
+        <div class="action-buttons">
+            <a href="{% url 'home' %}" class="button secondary">Volver al inicio</a>
+        </div>
+ 
+    </div>
+</div>
+</body>
+</html>

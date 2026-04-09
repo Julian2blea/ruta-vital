@@ -1,53 +1,94 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resultados del Cuestionario</title>
-    {% load static %}
-    <link rel="stylesheet" type="text/css" href="{% static 'styles.css' %}">
+    <title>Resultado — Ruta Vital</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
 </head>
 <body>
-
-<div class="resultado-container">
-    <h1> Resultados del Cuestionario de Salud</h1>
-    
-    <div class="info">
-        <h2> Nombre: {{ nombre }}</h2>
+<div class="container">
+ 
+    <div class="card resultado-card">
+ 
+        <h1>Resultado de tu Lectura</h1>
+ 
+        {% with status=reading.status %}
+ 
+        <div class="glucose-display status-{{ status }}">
+            <span class="glucose-value">{{ reading.glucose_value }}</span>
+            <span class="glucose-unit">mg/dL</span>
+        </div>
+ 
+        <div class="status-badge status-{{ status }}">
+            {% if status == 'hypoglycemia' %}
+                ⚠️ Hipoglucemia
+            {% elif status == 'normal' %}
+                ✅ Normal
+            {% elif status == 'prediabetes' %}
+                🟡 Prediabetes
+            {% elif status == 'high_glucose' %}
+                🔴 Glucosa Alta
+            {% endif %}
+        </div>
+ 
+        {% endwith %}
+ 
+        <div class="reading-meta">
+            <span>{{ reading.get_context_display }}</span>
+            <span>·</span>
+            <span>{{ reading.reading_date|date:"d/m/Y H:i" }}</span>
+        </div>
+ 
+        {% if reading.recommendation %}
+        <div class="recommendation-section">
+ 
+            {% if reading.recommendation.medical_warning %}
+            <div class="warning-banner">
+                 Se recomienda consultar a un médico lo antes posible.
+            </div>
+            {% endif %}
+ 
+            <div class="rec-card immediate">
+                <h3>¿Qué hacer ahora?</h3>
+                <p>{{ reading.recommendation.immediate_action }}</p>
+            </div>
+ 
+            {% if reading.recommendation.additional_advice %}
+            <div class="rec-card advice">
+                <h3>Consejo adicional</h3>
+                <p>{{ reading.recommendation.additional_advice }}</p>
+            </div>
+            {% endif %}
+ 
+            <div class="rec-card timing">
+                <h3>¿Cuándo volver a medir?</h3>
+                <p>{{ reading.recommendation.when_to_measure }}</p>
+            </div>
+ 
+        </div>
+        {% endif %}
+ 
+        {% if reading.notes %}
+        <div class="notes-section">
+            <h4>Tus notas</h4>
+            <p>{{ reading.notes }}</p>
+        </div>
+        {% endif %}
+ 
+        <p class="disclaimer">
+             Esta aplicación es una herramienta de orientación general.
+            No reemplaza el diagnóstico ni el tratamiento médico profesional.
+        </p>
+ 
+        <div class="action-buttons">
+            <a href="{% url 'register_reading' %}" class="button">Nueva lectura</a>
+            <a href="{% url 'history' %}" class="button secondary">Ver historial</a>
+            <a href="{% url 'home' %}" class="button secondary">Inicio</a>
+        </div>
+ 
     </div>
-
-    <div class="section">
-        <h3> Enfermedades Predichas</h3>
-        <ul>
-            {% for enfermedad in enfermedades %}
-                <li> {{ enfermedad }}</li>
-            {% empty %}
-                <li> No se predijeron enfermedades</li>
-            {% endfor %}
-        </ul>
-    </div>
-
-    <div class="section">
-        <h3> Clasificación de Riesgo</h3>
-        <p class="riesgo">{{ resultado }}</p>
-    </div>
-
-    <div class="section">
-        <h3>Recomendaciones</h3>
-        <ul>
-            {% for recomendacion in recomendaciones %}
-                <li>{{ recomendacion.texto }}</li>
-            {% empty %}
-                <li>No hay recomendaciones específicas</li>
-            {% endfor %}
-        </ul>
-    </div>
-
-    <div class="boton-salida">
-    <button class="btn salir-btn" onclick="window.location.href='/login/'">Salir</button>
 </div>
-
-</div>
-
 </body>
 </html>

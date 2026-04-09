@@ -1,0 +1,92 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Lectura — Ruta Vital</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+<div class="container">
+ 
+    <div class="card">
+        <h1>Registrar Lectura de Glucosa</h1>
+        <p class="subtitle">Ingresa tu nivel de glucosa en sangre (mg/dL)</p>
+ 
+        {% if error %}
+            <div class="error-message">{{ error }}</div>
+        {% endif %}
+ 
+        <form method="post" novalidate>
+            {% csrf_token %}
+ 
+            <div class="form-group">
+                <label for="glucose_value">Nivel de glucosa (mg/dL)</label>
+                <input type="number" name="glucose_value" id="glucose_value"
+                       min="20" max="600" step="0.1"
+                       placeholder="Ej: 95" required autofocus>
+                <small class="field-hint">Valor entre 20 y 600 mg/dL</small>
+            </div>
+ 
+            <div class="form-group">
+                <label for="context">Contexto de la medición</label>
+                <select name="context" id="context">
+                    <option value="fasting">En ayunas</option>
+                    <option value="postprandial">Postprandial (después de comer)</option>
+                    <option value="random" selected>Aleatorio</option>
+                </select>
+            </div>
+ 
+            <div class="form-group">
+                <label for="source">Fuente de la lectura</label>
+                <select name="source" id="source">
+                    <option value="manual" selected>Ingreso manual</option>
+                    <option value="simulated">Simulado por la app</option>
+                    <option value="device">Dispositivo externo</option>
+                </select>
+            </div>
+ 
+            <div class="form-group">
+                <label for="notes">Notas adicionales (opcional)</label>
+                <textarea name="notes" id="notes" rows="3"
+                          placeholder="Ej: Tomé la lectura después del almuerzo..."></textarea>
+            </div>
+ 
+            <div class="reference-table">
+                <h4>Valores de referencia</h4>
+                <table>
+                    <tr class="ref-hypoglycemia">
+                        <td>Hipoglucemia</td>
+                        <td>&lt; 70 mg/dL</td>
+                    </tr>
+                    <tr class="ref-normal">
+                        <td>Normal</td>
+                        <td>70 — 99 mg/dL</td>
+                    </tr>
+                    <tr class="ref-prediabetes">
+                        <td>Prediabetes</td>
+                        <td>100 — 125 mg/dL</td>
+                    </tr>
+                    <tr class="ref-high">
+                        <td>Glucosa alta</td>
+                        <td>&ge; 126 mg/dL</td>
+                    </tr>
+                </table>
+            </div>
+ 
+            <div class="action-buttons">
+                <button type="submit" class="button">Analizar lectura</button>
+                <a href="{% url 'home' %}" class="button secondary">Cancelar</a>
+            </div>
+        </form>
+ 
+        <p class="disclaimer">
+            Esta aplicación es una herramienta de orientación general.
+            No reemplaza el diagnóstico ni el tratamiento médico profesional.
+        </p>
+    </div>
+ 
+</div>
+</body>
+</html>

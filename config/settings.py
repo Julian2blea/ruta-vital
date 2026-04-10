@@ -13,7 +13,7 @@ SECRET_KEY = 'django-insecure-msotgmio863=%08lny98(a152ck$vbv!ep#*jq@u1zie=1m8(6
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['192.168.0.101', 'localhost', '127.0.0.1']
 
 
 
@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'django_filters',
+    'rest_framework.authtoken',
 ]
 
 MIDDLEWARE = [
@@ -142,6 +143,7 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',  # ← agrega esto
         'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_FILTER_BACKENDS': [

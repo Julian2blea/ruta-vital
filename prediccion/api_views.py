@@ -69,7 +69,7 @@ class UserViewSet(viewsets.ModelViewSet):
  
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def me(self, request):
-        """Returns the currently authenticated user."""
+        """Devuelve el usuario autenticado."""
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
  
@@ -139,7 +139,7 @@ class GlucoseReadingViewSet(viewsets.ModelViewSet):
     ordering = ['-reading_date']
  
     def get_queryset(self):
-        """Each user only sees their own readings."""
+        """Cada usuario solo puede ver sus propias lecturas."""
         return GlucoseReading.objects.filter(
             user=self.request.user
         ).select_related('recommendation')
@@ -151,11 +151,28 @@ class GlucoseReadingViewSet(viewsets.ModelViewSet):
             return GlucoseHistorySerializer
         return GlucoseReadingSerializer
  
-    def perform_create(self, serializer):
-        """Save the reading and auto-generate its recommendation."""
-        reading = serializer.save(user=self.request.user)
+    def create(self, request, *args, **kwargs):
+        
+        create_serializer = GlucoseReadingCreateSerializer(data=request.data)
+        create_serializer.is_valid(raise_exception=True)
+ 
+        reading = create_serializer.save(user=request.user)
+ 
         rec_data = build_recommendation(reading)
         GlucoseRecommendation.objects.create(reading=reading, **rec_data)
+ 
+        reading.refresh_from_db()
+        full_serializer = GlucoseReadingSerializer(
+            reading,
+            context={'request': request}
+        )
+        return Response(full_serializer.data, status=status.HTTP_201_CREATED)
+ 
+    @action(detail=False, methods=['get'])
+    def history(self, request):
+        readings = self.get_queryset()
+        serializer = GlucoseHistorySerializer(readings, many=True)
+        return Response(serializer.data)
  
     @action(detail=False, methods=['get'])
     def history(self, request):

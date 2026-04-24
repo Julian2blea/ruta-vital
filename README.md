@@ -92,46 +92,46 @@ Ruta Vital es un sistema integral orientado al monitoreo de salud, que permite:
 
 ##  Instalación local
 
-1. Clonar repositorio:
-```bash
-git clone https://github.com/Julian2blea/ruta-vital-movil.git
-cd ruta-vital-movil
+  1. Clonar repositorio:
+      ```bash
+      git clone https://github.com/Julian2blea/ruta-vital-movil.git
+      cd ruta-vital-movil
+  
+  2. Crear entorno virtual:
+      ```bash
+      python -m venv venv
+      venv\Scripts\activate
+    
+  3. Instalar dependencias:
+      ```bash
+      pip install -r requirements.txt
 
-2. Crear entorno virtual:
-```bash
-python -m venv venv
-venv\Scripts\activate
-
-3. Instalar dependencias:
-```bash
-pip install -r requirements.txt
-
-4. Configurar base de datos en settings.py
-
-5. Ejecutar migraciones:
-```bash
-python manage.py migrate
-
-6. Crear superusuario:
-```bash
-python manage.py createsuperuser
-
-7. Ejecutar servidor:
-```bash
-python manage.py runserver
+  4. Configurar base de datos en settings.py
+  
+  5. Ejecutar migraciones:
+      ```bash
+      python manage.py migrate
+  
+  6. Crear superusuario:
+      ```bash
+      python manage.py createsuperuser
+  
+  7. Ejecutar servidor:
+      ```bash
+      python manage.py runserver
 
 ---
 
 ### Despliegue (Azure)
 
-El proyecto está preparado para despliegue en Azure mediante:
-- Procfile
-- gunicorn
-- whitenoise
-
-Comando de inicio:
-```bash
-web: gunicorn config.wsgi
+  El proyecto está preparado para despliegue en Azure mediante:
+  - Procfile
+  - gunicorn
+  - whitenoise
+  
+  Comando de inicio:
+    ```bash
+    web: gunicorn config.wsgi
 
 ---
 

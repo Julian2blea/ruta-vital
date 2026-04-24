@@ -23,14 +23,6 @@ from .views import build_recommendation
 # ─────────────────────────────────────────────
  
 class PersonViewSet(viewsets.ModelViewSet):
-    """
-    GET    /api/persons/        - List all persons
-    POST   /api/persons/        - Create a person
-    GET    /api/persons/{id}/   - Retrieve a person
-    PUT    /api/persons/{id}/   - Full update
-    PATCH  /api/persons/{id}/   - Partial update
-    DELETE /api/persons/{id}/   - Delete
-    """
     queryset = Person.objects.all()
     serializer_class = PersonSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
@@ -45,16 +37,6 @@ class PersonViewSet(viewsets.ModelViewSet):
 # ─────────────────────────────────────────────
  
 class UserViewSet(viewsets.ModelViewSet):
-    """
-    GET    /api/users/          - List all users
-    POST   /api/users/          - Create a user
-    GET    /api/users/{id}/     - Retrieve a user
-    PUT    /api/users/{id}/     - Full update
-    PATCH  /api/users/{id}/     - Partial update
-    DELETE /api/users/{id}/     - Delete
- 
-    GET    /api/users/me/       - Current authenticated user
-    """
     queryset = User.objects.all().select_related('person').prefetch_related('roles')
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -69,7 +51,6 @@ class UserViewSet(viewsets.ModelViewSet):
  
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def me(self, request):
-        """Devuelve el usuario autenticado."""
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
  
@@ -79,14 +60,6 @@ class UserViewSet(viewsets.ModelViewSet):
 # ─────────────────────────────────────────────
  
 class RoleViewSet(viewsets.ModelViewSet):
-    """
-    GET    /api/roles/          - List all roles
-    POST   /api/roles/          - Create a role
-    GET    /api/roles/{id}/     - Retrieve a role
-    PUT    /api/roles/{id}/     - Full update
-    PATCH  /api/roles/{id}/     - Partial update
-    DELETE /api/roles/{id}/     - Delete
-    """
     queryset = Role.objects.all().prefetch_related('permissions')
     serializer_class = RoleSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
@@ -101,14 +74,6 @@ class RoleViewSet(viewsets.ModelViewSet):
 # ─────────────────────────────────────────────
  
 class PermissionViewSet(viewsets.ModelViewSet):
-    """
-    GET    /api/permissions/        - List all permissions
-    POST   /api/permissions/        - Create a permission
-    GET    /api/permissions/{id}/   - Retrieve a permission
-    PUT    /api/permissions/{id}/   - Full update
-    PATCH  /api/permissions/{id}/   - Partial update
-    DELETE /api/permissions/{id}/   - Delete
-    """
     queryset = Permission.objects.all()
     serializer_class = PermissionSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
@@ -123,26 +88,31 @@ class PermissionViewSet(viewsets.ModelViewSet):
 # ─────────────────────────────────────────────
  
 class GlucoseReadingViewSet(viewsets.ModelViewSet):
-    """
-    GET    /api/readings/               - List readings of current user
-    POST   /api/readings/               - Register a new reading (auto-generates recommendation)
-    GET    /api/readings/{id}/          - Retrieve a reading with its recommendation
-    DELETE /api/readings/{id}/          - Delete a reading
- 
-    GET    /api/readings/history/       - Lightweight list for charts/history
-    GET    /api/readings/my_readings/   - Alias for filtered list
-    """
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['status', 'context', 'source']
     ordering_fields = ['id', 'reading_date', 'glucose_value']
     ordering = ['-reading_date']
  
+    def _is_admin(self, request):
+        """Returns True if the current user is staff or has the 'admin' role."""
+        return (
+            request.user.is_staff or
+            request.user.roles.filter(description='admin').exists()
+        )
+ 
     def get_queryset(self):
-        """Cada usuario solo puede ver sus propias lecturas."""
+        """
+        Admins see ALL readings from all users (with user info).
+        Regular users only see their own readings.
+        """
+        if self._is_admin(self.request):
+            return GlucoseReading.objects.all().select_related(
+                'recommendation', 'user', 'user__person'
+            ).order_by('-reading_date')
         return GlucoseReading.objects.filter(
             user=self.request.user
-        ).select_related('recommendation')
+        ).select_related('recommendation').order_by('-reading_date')
  
     def get_serializer_class(self):
         if self.action == 'create':
@@ -152,7 +122,7 @@ class GlucoseReadingViewSet(viewsets.ModelViewSet):
         return GlucoseReadingSerializer
  
     def create(self, request, *args, **kwargs):
-        
+        """Override create to return full reading with id + recommendation."""
         create_serializer = GlucoseReadingCreateSerializer(data=request.data)
         create_serializer.is_valid(raise_exception=True)
  
@@ -170,14 +140,10 @@ class GlucoseReadingViewSet(viewsets.ModelViewSet):
  
     @action(detail=False, methods=['get'])
     def history(self, request):
-        readings = self.get_queryset()
-        serializer = GlucoseHistorySerializer(readings, many=True)
-        return Response(serializer.data)
- 
-    @action(detail=False, methods=['get'])
-    def history(self, request):
         """
-        Lightweight endpoint for the chart / history screen.
+        Lightweight list for charts and history screen.
+        Regular users: own readings only.
+        Admins: all readings.
         GET /api/readings/history/
         """
         readings = self.get_queryset()
@@ -187,10 +153,37 @@ class GlucoseReadingViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def my_readings(self, request):
         """
-        Full reading list with recommendations for the current user.
+        Full reading list with nested recommendations.
+        Regular users: own readings only.
+        Admins: ALL readings from every user.
         GET /api/readings/my_readings/
         """
         readings = self.get_queryset()
         serializer = GlucoseReadingSerializer(readings, many=True)
         return Response(serializer.data)
- 
+
+# ─────────────────────────────────────────────
+# USER HAS ROLE (Asignación de roles)
+# ─────────────────────────────────────────────
+
+class UserHasRoleViewSet(viewsets.ModelViewSet):
+    queryset = UserHasRole.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        user_id = request.data.get('user')
+        role_id = request.data.get('role')
+
+        try:
+            user = User.objects.get(id=user_id)
+            role = Role.objects.get(id=role_id)
+
+            UserHasRole.objects.create(user=user, role=role)
+
+            return Response({"message": "Rol asignado correctamente"}, status=201)
+
+        except User.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=404)
+
+        except Role.DoesNotExist:
+            return Response({"error": "Rol no encontrado"}, status=404)    

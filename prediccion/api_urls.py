@@ -6,6 +6,7 @@ from .api_views import (
     RoleViewSet,
     PermissionViewSet,
     GlucoseReadingViewSet,
+    UserHasRoleViewSet,
 )
 from .auth_views import api_login, api_register, api_logout
 
@@ -15,6 +16,7 @@ router.register(r'users',       UserViewSet,           basename='api-users')
 router.register(r'roles',       RoleViewSet,           basename='api-roles')
 router.register(r'permissions', PermissionViewSet,     basename='api-permissions')
 router.register(r'readings',    GlucoseReadingViewSet, basename='api-readings')
+router.register(r'user-roles', UserHasRoleViewSet,    basename='api-user-roles')
 
 urlpatterns = [
     # ── Auth endpoints ────────────────────────────────────────

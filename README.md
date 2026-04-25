@@ -1,80 +1,167 @@
-#  Ruta Vital - Backend julian
+#  Ruta Vital - Backend API
 
-Plataforma web de predicción de enfermedades basada en análisis de hábitos alimenticios y estilo de vida.
+API REST desarrollada con Django y Django REST Framework para la gestión de usuarios, lecturas de glucosa y predicción de riesgos de salud basada en hábitos alimenticios.
+
+---
 
 ##  Descripción
 
-Ruta Vital es una herramienta de evaluación de salud que permite a los usuarios conocer su riesgo de desarrollar enfermedades crónicas mediante un cuestionario simple de 5 minutos.
+Ruta Vital es un sistema integral orientado al monitoreo de salud, que permite:
 
-##  Características
+- Registrar lecturas de glucosa
+- Analizar resultados según estándares clínicos (ADA)
+- Generar recomendaciones automáticas
+- Gestionar usuarios, roles y permisos
+- Proveer datos a una aplicación móvil desarrollada en Expo
 
--  Sistema de autenticación de usuarios
--  Cuestionario interactivo de 4 pasos
--  Predicción de 7 enfermedades comunes
--  Análisis de nivel de riesgo (Bajo, Moderado, Alto)
--  Recomendaciones personalizadas
--  Diseño responsive
+---
 
-## 🛠️ Tecnologías
+##  Características principales
 
-- **Backend:** Django 5.2.7
-- **Base de datos:** MySQL (MariaDB 10.4)
-- **Frontend:** HTML5, CSS3, JavaScript
-- **Python:** 3.11.7
+###  Autenticación
+- Registro e inicio de sesión
+- Manejo de tokens
+- Endpoint `/api/users/me/`
 
-##  Instalación
+###  Lecturas de glucosa
+- Registro de lecturas (manual o simuladas)
+- Clasificación automática:
+  - Hipoglucemia
+  - Normal
+  - Prediabetes
+  - Glucosa alta
+- Recomendaciones personalizadas
+- Historial de lecturas
 
-1. Clona el repositorio:
-```bash
-git clone https://github.com/Julian2blea/ruta-vital.git
-cd ruta-vital
-```
+###  Análisis
+- Datos optimizados para gráficas
+- Seguimiento de evolución del usuario
 
-2. Crea un entorno virtual:
-```bash
-python -m venv venv
-venv\Scripts\activate  # Windows
-```
+###  Panel de administración
+- Gestión de usuarios
+- Asignación de roles (admin / paciente)
+- Visualización de permisos
+- Acceso a todas las lecturas del sistema
 
-3. Instala dependencias:
-```bash
-pip install -r requirements.txt
-```
+###  Lógica inteligente
+- Generación automática de recomendaciones
+- Evaluación basada en estándares ADA
 
-4. Configura la base de datos en `settings.py`
+---
 
-5. Ejecuta migraciones:
-```bash
-python manage.py migrate
-```
+##  Tecnologías
 
-6. Crea un superusuario:
-```bash
-python manage.py createsuperuser
-```
+- **Backend:** Django 5 + Django REST Framework
+- **Base de datos:** MySQL / MariaDB
+- **Autenticación:** Token Authentication
+- **Servidor:** Gunicorn (producción)
+- **Despliegue:** Microsoft Azure
+- **Lenguaje:** Python 3.11
 
-7. Ejecuta el servidor:
-```bash
-python manage.py runserver
-```
+---
 
-##  Estructura del Proyecto
-```
+##  API Endpoints principales
+
+###  Auth
+- POST /api/auth/login/
+- POST /api/auth/register/
+- POST /api/auth/logout/
+- GET /api/users/me/
+
+---
+
+### Usuarios
+- GET /api/users/
+
+---  
+
+### Roles y Permisos
+- GET /api/roles/
+- GET /api/permissions/
+- POST /api/user-roles/ ← asignación de roles
+
+---
+  
+### Lecturas
+- POST /api/readings/
+- GET /api/readings/
+- GET /api/readings/history/
+- GET /api/readings/my_readings/
+
+---
+
+##  Instalación local
+
+  1. Clonar repositorio:
+      ```bash
+      git clone https://github.com/Julian2blea/ruta-vital-movil.git
+      cd ruta-vital-movil
+  
+  2. Crear entorno virtual:
+      ```bash
+      python -m venv venv
+      venv\Scripts\activate
+    
+  3. Instalar dependencias:
+      ```bash
+      pip install -r requirements.txt
+
+  4. Configurar base de datos en settings.py
+  
+  5. Ejecutar migraciones:
+      ```bash
+      python manage.py migrate
+  
+  6. Crear superusuario:
+      ```bash
+      python manage.py createsuperuser
+  
+  7. Ejecutar servidor:
+      ```bash
+      python manage.py runserver
+
+---
+
+### Despliegue (Azure)
+
+  El proyecto está preparado para despliegue en Azure mediante:
+  - Procfile
+  - gunicorn
+  - whitenoise
+  
+  Comando de inicio:
+    ```bash
+    web: gunicorn config.wsgi
+
+---
+
+### Estructura del proyecto:
 prediccion_enfermedades/
-├── config/              # Configuración principal
-├── prediccion/          # App principal
-│   ├── models.py       # Modelos de datos
-│   ├── views.py        # Lógica de vistas
-│   ├── forms.py        # Formularios
-│   ├── static/         # Archivos estáticos
-│   └── templates/      # Templates HTML
+├── config/                 # Configuración principal (settings, urls, wsgi)
+├── prediccion/             # App principal
+│   ├── models.py
+│   ├── serializers.py
+│   ├── api_views.py        # API REST endpoints
+│   ├── views.py            # Lógica de recomendaciones
 ├── manage.py
-└── requirements.txt
-```
+├── requirements.txt
+├── Procfile
 
-##  Autor
+---
 
-Julian Gaitan - Proyecto Integrador
+### Roles del sistema
 
-##  Licencia
-Este proyecto es parte de un trabajo académico.
+- Admin:	Acceso total, gestión de usuarios y datos
+- Usuario comun:	Registro y consulta de sus lecturas
+
+---
+
+### Integracion
+Este backend se conecta con una aplicación móvil desarrollada en Expo (React Native), la cual consume esta API.
+
+---
+
+### Autores
+Proyecto integrador
+Julian Gaitan, Albeiro Jimenez - Ingeniería de Software
+Proyecto academico con fines educativos

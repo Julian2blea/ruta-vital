@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect
+from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, logout
 from django.contrib.auth.forms import AuthenticationForm
@@ -12,9 +13,7 @@ from .forms import RegisterForm
 # ─────────────────────────────────────────────
 
 def landing(request):
-    if request.user.is_authenticated:
-        return redirect('home')
-    return render(request, 'landing.html')
+    return JsonResponse({'message': 'Bienvenido a la API de Ruta vital'})
 
 
 def registro(request):

@@ -178,12 +178,18 @@ class UserHasRoleViewSet(viewsets.ModelViewSet):
             user = User.objects.get(id=user_id)
             role = Role.objects.get(id=role_id)
 
-            UserHasRole.objects.create(user=user, role=role)
+            
+            obj, created = UserHasRole.objects.get_or_create(user=user, role=role)
+
+            if not created:
+                return Response(
+                    {"message": "El usuario ya tiene ese rol"},
+                    status=status.HTTP_200_OK
+                )
 
             return Response({"message": "Rol asignado correctamente"}, status=201)
 
         except User.DoesNotExist:
             return Response({"error": "Usuario no encontrado"}, status=404)
-
         except Role.DoesNotExist:
-            return Response({"error": "Rol no encontrado"}, status=404)    
+            return Response({"error": "Rol no encontrado"}, status=404)   

@@ -1,12 +1,24 @@
+from django.contrib.auth import authenticate
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.authtoken.models import Token
-from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Person, User
+from .models import User
 from .serializers import UserSerializer
+
+
+def _get_tokens_for_user(user: User) -> dict:
+    """
+    Genera par de tokens JWT para un usuario.
+    Retorna: { refresh: str, access: str }
+    """
+    refresh = RefreshToken.for_user(user)
+    return {
+        'refresh': str(refresh),
+        'access':  str(refresh.access_token),
+    }
 
 
 @api_view(['POST'])
@@ -14,37 +26,40 @@ from .serializers import UserSerializer
 def api_login(request):
     """
     POST /api/auth/login/
-    Body: { "login": "...", "password": "..." }
-    Returns: { "token": "...", "user": { ... } }
+    Body: { login, password }
+    Response: { access, refresh, user }
     """
     login_val = request.data.get('login', '').strip()
-    password  = request.data.get('password', '')
+    password  = request.data.get('password', '').strip()
 
     if not login_val or not password:
         return Response(
-            {'detail': 'Login y contraseña son requeridos.'},
+            {'error': 'login y password son requeridos'},
             status=status.HTTP_400_BAD_REQUEST
         )
 
+    
     user = authenticate(request, username=login_val, password=password)
 
     if user is None:
         return Response(
-            {'detail': 'Credenciales incorrectas.'},
+            {'error': 'Credenciales incorrectas'},
             status=status.HTTP_401_UNAUTHORIZED
         )
 
     if not user.is_active:
         return Response(
-            {'detail': 'Cuenta desactivada.'},
+            {'error': 'Cuenta desactivada'},
             status=status.HTTP_403_FORBIDDEN
         )
 
-    token, _ = Token.objects.get_or_create(user=user)
+    tokens = _get_tokens_for_user(user)
+    user_data = UserSerializer(user).data
 
     return Response({
-        'token': token.key,
-        'user':  UserSerializer(user).data,
+        'access':  tokens['access'],
+        'refresh': tokens['refresh'],
+        'user':    user_data,
     }, status=status.HTTP_200_OK)
 
 
@@ -53,57 +68,64 @@ def api_login(request):
 def api_register(request):
     """
     POST /api/auth/register/
-    Body: { "login": "...", "password": "...", "first_name": "...", "last_name": "...", "email": "..." }
-    Returns: { "token": "...", "user": { ... } }
+    Body: { login, password, first_name, last_name, email }
+    Response: { access, refresh, user }
     """
-    login_val  = request.data.get('login', '').strip()
-    password   = request.data.get('password', '')
-    first_name = request.data.get('first_name', '').strip()
-    last_name  = request.data.get('last_name', '').strip()
-    email      = request.data.get('email', '').strip()
+    from django.db import transaction
+    from .models import Person, Role
 
-    # Validations
-    if not login_val or not password or not first_name or not last_name:
-        return Response(
-            {'detail': 'Nombre, apellido, usuario y contraseña son obligatorios.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    data       = request.data
+    login_val  = data.get('login', '').strip()
+    password   = data.get('password', '').strip()
+    first_name = data.get('first_name', '').strip()
+    last_name  = data.get('last_name', '').strip()
+    email      = data.get('email', '').strip()
 
-    if len(login_val) < 4:
+    
+    if not all([login_val, password, first_name, last_name]):
         return Response(
-            {'login': ['El usuario debe tener al menos 4 caracteres.']},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    if len(password) < 8:
-        return Response(
-            {'password': ['La contraseña debe tener al menos 8 caracteres.']},
+            {'error': 'login, password, first_name y last_name son requeridos'},
             status=status.HTTP_400_BAD_REQUEST
         )
 
     if User.objects.filter(login=login_val).exists():
         return Response(
-            {'login': ['Ese nombre de usuario ya está en uso.']},
+            {'error': 'Ese login ya está en uso'},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Create person + user
-    person = Person.objects.create(
-        first_name=first_name,
-        last_name=last_name,
-        email=email,
-    )
-    user = User.objects.create_user(
-        login=login_val,
-        password=password,
-        person=person,
-    )
+    try:
+        with transaction.atomic():
+            person = Person.objects.create(
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
+            )
+            user = User.objects.create_user(
+                login=login_val,
+                password=password,
+                person=person,
+            )
+            
+            try:
+                patient_role = Role.objects.get(description='patient')
+                user.roles.add(patient_role)
+            except Role.DoesNotExist:
+                pass  # No bloquea el registro si el rol no existe
 
-    token, _ = Token.objects.get_or_create(user=user)
+    except Exception as e:
+        return Response(
+            {'error': f'Error al crear usuario: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+    tokens    = _get_tokens_for_user(user)
+    user_data = UserSerializer(user).data
 
     return Response({
-        'token': token.key,
-        'user':  UserSerializer(user).data,
+        'access':  tokens['access'],
+        'refresh': tokens['refresh'],
+        'user':    user_data,
     }, status=status.HTTP_201_CREATED)
 
 
@@ -112,15 +134,20 @@ def api_register(request):
 def api_logout(request):
     """
     POST /api/auth/logout/
-    Header: Authorization: Token <token>
-    Deletes the token — user must login again.
+    Body: { refresh }  ← el frontend envía el refresh token para invalidarlo
+    Blacklistea el refresh token para que no pueda usarse más.
     """
+    refresh_token = request.data.get('refresh')
+
+    if not refresh_token:
+        
+        return Response({'message': 'Sesión cerrada'}, status=status.HTTP_200_OK)
+
     try:
-        request.user.auth_token.delete()
+        token = RefreshToken(refresh_token)
+        token.blacklist()
     except Exception:
+        
         pass
 
-    return Response(
-        {'detail': 'Sesión cerrada correctamente.'},
-        status=status.HTTP_200_OK
-    )
+    return Response({'message': 'Sesión cerrada correctamente'}, status=status.HTTP_200_OK)

@@ -3,6 +3,7 @@ from django.urls import path, include
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+from rest_framework_simplejwt.views import TokenRefreshView
 
 # Configuración de Swagger
 schema_view = get_schema_view(
@@ -20,10 +21,14 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('prediccion.urls')), 
-    path('api/', include('prediccion.api_urls')),  
-    
-    # Documentación Swagger
-    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+
+    # API REST (ViewSets + auth endpoints custom)
+    path('api/', include('prediccion.api_urls')),
+
+    # Endpoint estándar de refresh — el frontend lo llama directamente
+    # POST /api/token/refresh/  { refresh }  →  { access, refresh (rotado) }
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
+    # Vistas web Django 
+    path('', include('prediccion.urls')),
 ]

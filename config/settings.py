@@ -74,25 +74,17 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 
-if os.getenv('WEBSITE_SITE_NAME'):
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': os.path.join(os.getcwd(), 'db.sqlite3'),
-        },
-    }
-
-else:
-    DATABASES = {
+DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
             'NAME': 'prediccion_db',
-            'USER': 'root',
-            'PASSWORD': 'julian0627',
-            'HOST': 'localhost',
+            'USER': 'adminruta',
+            'PASSWORD': 'Juli0627#',
+            'HOST': 'ruta-vital-db.mysql.database.azure.com',
             'PORT': '3306',
             'OPTIONS': {
-                'charset': 'utf8mb4',
+            'charset': 'utf8mb4',
+            'ssl': {'ca': None},
             },
         }
     }

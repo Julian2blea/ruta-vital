@@ -14,7 +14,13 @@ SECRET_KEY = 'django-insecure-msotgmio863=%08lny98(a152ck$vbv!ep#*jq@u1zie=1m8(6
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['ruta-viatl-api-fbayadbtdxgaf4ga.brazilsouth-01.azurewebsites.net', '10.189.244.124', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['ruta-viatl-api-fbayadbtdxgaf4ga.brazilsouth-01.azurewebsites.net',
+                 '169.254.130.2',
+                 '10.189.244.124', 
+                 'localhost', 
+                 '127.0.0.1',
+                 '*'
+                 ]
 
 CSRF_TRUSTED_ORIGINS = [
     'https://*.azurewebsites.net'

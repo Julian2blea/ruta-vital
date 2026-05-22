@@ -90,7 +90,7 @@ DATABASES = {
             'PORT': '3306',
             'OPTIONS': {
             'charset': 'utf8mb4',
-            'ssl': {'ca': None},
+            'ssl_require': True,
             },
         }
     }

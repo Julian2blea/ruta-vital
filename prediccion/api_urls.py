@@ -8,7 +8,7 @@ from .api_views import (
     GlucoseReadingViewSet,
     UserHasRoleViewSet,
 )
-from .auth_views import api_login, api_register, api_logout
+from .auth_views import api_login, api_register, api_logout, api_reset_password
 
 router = DefaultRouter()
 router.register(r'persons',     PersonViewSet,         basename='api-persons')
@@ -23,6 +23,7 @@ urlpatterns = [
     path('auth/login/',    api_login,    name='api-login'),
     path('auth/register/', api_register, name='api-register'),
     path('auth/logout/',   api_logout,   name='api-logout'),
+    path('auth/reset-password/', api_reset_password, name='api-reset-password'),
 
     # ── REST ViewSets ─────────────────────────────────────────
     path('', include(router.urls)),

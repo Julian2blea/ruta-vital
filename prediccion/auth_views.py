@@ -151,3 +151,43 @@ def api_logout(request):
         pass
 
     return Response({'message': 'Sesión cerrada correctamente'}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def api_reset_password(request):
+    """
+    POST /api/auth/reset-password/
+    Body: { login, new_password }
+    Busca el usuario por login, verifica que existe y actualiza la contraseña.
+    """
+    login_val    = request.data.get('login', '').strip()
+    new_password = request.data.get('new_password', '').strip()
+
+    if not login_val or not new_password:
+        return Response(
+            {'error': 'login y new_password son requeridos'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if len(new_password) < 8:
+        return Response(
+            {'error': 'La contraseña debe tener mínimo 8 caracteres'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        user = User.objects.get(login=login_val)
+    except User.DoesNotExist:
+        return Response(
+            {'error': 'No existe un usuario con ese nombre'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    user.set_password(new_password)
+    user.save()
+
+    return Response(
+        {'message': 'Contraseña actualizada correctamente'},
+        status=status.HTTP_200_OK
+    )

@@ -89,8 +89,10 @@ DATABASES = {
             'HOST': 'ruta-vital-db.mysql.database.azure.com',
             'PORT': '3306',
             'OPTIONS': {
-            'charset': 'utf8mb4',
-            'ssl_require': True,
+                'charset': 'utf8mb4',
+                'ssl': {
+                    'ssl-mode': 'REQUIRED',
+                },
             },
         }
     }

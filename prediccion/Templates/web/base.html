@@ -1,0 +1,81 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Ruta Vital — Panel Admin{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="{% static 'web/css/styles.css' %}" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <h4>🩺 Ruta Vital</h4>
+        <small>Panel de Administración</small>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section">Principal</div>
+        <div class="nav-item">
+            <a href="{% url 'web:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                <i class="fas fa-th-large"></i> Dashboard
+            </a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'web:eda' %}" class="{% if request.resolver_match.url_name == 'eda' %}active{% endif %}">
+                <i class="fas fa-chart-bar"></i> Análisis EDA
+            </a>
+        </div>
+        <div class="nav-section">Gestión Clínica</div>
+        <div class="nav-item">
+            <a href="{% url 'web:users' %}" class="{% if request.resolver_match.url_name == 'users' %}active{% endif %}">
+                <i class="fas fa-users"></i> Usuarios / Pacientes
+            </a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'web:readings' %}" class="{% if request.resolver_match.url_name == 'readings' %}active{% endif %}">
+                <i class="fas fa-heartbeat"></i> Lecturas Globales
+            </a>
+        </div>
+        <div class="nav-section">Sistema</div>
+        <div class="nav-item">
+            <a href="{% url 'web:logout' %}">
+                <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+            </a>
+        </div>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="d-flex align-items-center gap-2">
+            <div class="s-avatar">{{ request.user.login|first|upper }}</div>
+            <div>
+                <div class="s-user">@{{ request.user.login }}</div>
+                <div class="s-role"><i class="fas fa-shield-alt"></i> Administrador</div>
+            </div>
+        </div>
+    </div>
+</aside>
+
+<div class="main-content">
+    <div class="topbar">
+        <h5>{% block page_title %}Dashboard{% endblock %}</h5>
+        <span class="badge-admin"><i class="fas fa-shield-alt"></i> &nbsp;Admin</span>
+    </div>
+    <div class="page-body">
+        {% if messages %}
+            {% for msg in messages %}
+            <div style="background:#7F1D1D;color:#FCA5A5;border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:0.875rem;">
+                {{ msg }}
+            </div>
+            {% endfor %}
+        {% endif %}
+        {% block content %}{% endblock %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

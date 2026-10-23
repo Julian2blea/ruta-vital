@@ -1,0 +1,40 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ruta Vital — Acceso Admin</title>
+    <link href="{% static 'web/css/styles.css' %}" rel="stylesheet">
+</head>
+<body>
+<body class="login-body">
+<div class="login-card">
+    <div class="login-brand">
+        <div class="icon">🩺</div>
+        <h2>Ruta Vital</h2>
+        <p>Panel de Administración Clínica</p>
+    </div>
+
+    {% if messages %}
+        {% for msg in messages %}
+            <div class="error-msg">{{ msg }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="POST">
+        {% csrf_token %}
+        <label>Usuario administrador</label>
+        <input type="text" name="login" placeholder="Tu nombre de usuario" required autocomplete="username">
+        <label>Contraseña</label>
+        <input type="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+        <button type="submit">Acceder al panel</button>
+    </form>
+
+    <div style="text-align: center; color: #334155; font-size: 0.72rem; margin-top: 24px; line-height: 1.5;">
+        Acceso exclusivo para administradores.<br>
+        Los pacientes utilizan la app móvil Ruta Vital.
+    </div>
+</div>
+</body>
+</html>

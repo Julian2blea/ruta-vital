@@ -1,0 +1,174 @@
+{% extends 'web/base.html' %}
+{% block title %}Dashboard — Ruta Vital{% endblock %}
+{% block page_title %}Dashboard General{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+
+<!-- KPI CARDS -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:rgba(96,165,250,0.12);">
+                <i class="fas fa-users" style="color:#60A5FA;"></i>
+            </div>
+            <div class="kpi-val" style="color:#60A5FA;">{{ total_users }}</div>
+            <div class="kpi-lbl">Pacientes registrados</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:rgba(52,211,153,0.12);">
+                <i class="fas fa-heartbeat" style="color:#34D399;"></i>
+            </div>
+            <div class="kpi-val" style="color:#34D399;">{{ total_readings }}</div>
+            <div class="kpi-lbl">Total de lecturas</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:rgba(248,113,113,0.12);">
+                <i class="fas fa-exclamation-triangle" style="color:#F87171;"></i>
+            </div>
+            <div class="kpi-val" style="color:#F87171;">{{ critical }}</div>
+            <div class="kpi-lbl">Lecturas críticas</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:rgba(52,211,153,0.12);">
+                <i class="fas fa-check-circle" style="color:#34D399;"></i>
+            </div>
+            <div class="kpi-val" style="color:#34D399;">{{ normal_pct }}%</div>
+            <div class="kpi-lbl">Lecturas en rango normal</div>
+        </div>
+    </div>
+</div>
+
+<!-- MINI GRÁFICA + TABLA CRÍTICOS -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-5">
+        <div class="data-card">
+            <h6><i class="fas fa-chart-line me-2"></i>Actividad — Últimos 7 días</h6>
+            <div style="position:relative;height:200px;">
+                <canvas id="miniChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="data-card">
+            <h6><i class="fas fa-exclamation-circle me-2" style="color:#F87171;"></i>Alertas Recientes</h6>
+            <div style="overflow-x:auto;">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Valor</th>
+                            <th>Estado</th>
+                            <th>Contexto</th>
+                            <th>Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in recent_critical %}
+                        <tr>
+                            <td>@{{ r.user.login }}</td>
+                            <td style="font-weight:700;">{{ r.glucose_value }} mg/dL</td>
+                            <td>
+                                {% if r.status == 'high_glucose' %}
+                                    <span class="bs bs-high">Glucosa Alta</span>
+                                {% else %}
+                                    <span class="bs bs-hypo">Hipoglucemia</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-sec">{{ r.get_context_display }}</td>
+                            <td class="text-sec" style="font-size:0.78rem;">{{ r.reading_date|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="text-sec" style="text-align:center;padding:24px;">Sin alertas críticas</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ÚLTIMAS LECTURAS -->
+<div class="data-card">
+    <h6><i class="fas fa-list me-2"></i>Últimas Lecturas del Sistema</h6>
+    <div style="overflow-x:auto;">
+        <table class="tbl">
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Glucosa</th>
+                    <th>Estado</th>
+                    <th>Contexto</th>
+                    <th>Fuente</th>
+                    <th>Fecha</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in recent_readings %}
+                <tr>
+                    <td>
+                        <span style="font-weight:600;">@{{ r.user.login }}</span>
+                        {% if r.user.person %}
+                            <br><span class="text-sec" style="font-size:0.75rem;">{{ r.user.person.first_name }} {{ r.user.person.last_name }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-weight:700;font-size:1rem;">{{ r.glucose_value }} <span class="text-sec" style="font-size:0.75rem;">mg/dL</span></td>
+                    <td>
+                        {% if r.status == 'normal' %}<span class="bs bs-normal">Normal</span>
+                        {% elif r.status == 'prediabetes' %}<span class="bs bs-prediabetes">Prediabetes</span>
+                        {% elif r.status == 'high_glucose' %}<span class="bs bs-high">Glucosa Alta</span>
+                        {% else %}<span class="bs bs-hypo">Hipoglucemia</span>{% endif %}
+                    </td>
+                    <td class="text-sec">{{ r.get_context_display }}</td>
+                    <td class="text-sec">{{ r.get_source_display }}</td>
+                    <td class="text-sec" style="font-size:0.78rem;">{{ r.reading_date|date:"d/m/Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-sec" style="text-align:center;padding:24px;">Sin lecturas registradas</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const miniData = JSON.parse('{{ mini_data_json|escapejs }}');
+Chart.defaults.color = '#94A3B8';
+new Chart(document.getElementById('miniChart'), {
+    type: 'line',
+    data: {
+        labels: miniData.labels.length ? miniData.labels : ['Sin datos'],
+        datasets: [{
+            label: 'Lecturas',
+            data: miniData.data.length ? miniData.data : [0],
+            borderColor: '#34D399',
+            backgroundColor: 'rgba(52,211,153,0.08)',
+            tension: 0.4,
+            fill: true,
+            pointBackgroundColor: '#34D399',
+            pointRadius: 4,
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { font: { size: 10 } } },
+            y: { grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true, ticks: { stepSize: 1 } }
+        }
+    }
+});
+</script>
+{% endblock %}

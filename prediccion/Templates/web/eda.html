@@ -1,0 +1,259 @@
+{% extends 'web/base.html' %}
+{% block title %}Análisis EDA — Ruta Vital{% endblock %}
+{% block page_title %}Análisis Exploratorio de Datos (EDA){% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+
+<!-- CARDS RESUMEN -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-4">
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:rgba(52,211,153,0.12);">
+                <i class="fas fa-database" style="color:#34D399;"></i>
+            </div>
+            <div class="kpi-val" style="color:#34D399;">{{ total_readings }}</div>
+            <div class="kpi-lbl">Lecturas analizadas</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-4">
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:rgba(96,165,250,0.12);">
+                <i class="fas fa-tachometer-alt" style="color:#60A5FA;"></i>
+            </div>
+            <div class="kpi-val" style="color:#60A5FA;">{{ avg_global }} <span style="font-size:1rem;font-weight:400;">mg/dL</span></div>
+            <div class="kpi-lbl">Promedio global de glucosa</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-4">
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:rgba(251,191,36,0.12);">
+                <i class="fas fa-exclamation" style="color:#FBBF24;"></i>
+            </div>
+            <div class="kpi-val" style="color:#FBBF24;">{{ prediabetes_count }}</div>
+            <div class="kpi-lbl">Casos en zona prediabetes</div>
+        </div>
+    </div>
+</div>
+
+<!-- FILA 1: Distribución glucémica + Tendencia diaria -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-4">
+        <div class="data-card">
+            <h6><i class="fas fa-chart-pie me-2"></i>Distribución por Estado Glucémico</h6>
+            <div style="position:relative;height:240px;">
+                <canvas id="chartDist"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="data-card">
+            <h6><i class="fas fa-chart-line me-2"></i>Lecturas por Día — Últimos {{ days_analyzed }} días</h6>
+            <div style="position:relative;height:240px;">
+                <canvas id="chartDaily"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FILA 2: Promedio glucosa + Contexto -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-8">
+        <div class="data-card">
+            <h6><i class="fas fa-wave-square me-2"></i>Promedio de Glucosa por Día — Últimos {{ days_analyzed }} días</h6>
+            <div style="position:relative;height:220px;">
+                <canvas id="chartAvg"></canvas>
+            </div>
+            <!-- Líneas de referencia ADA -->
+            <div class="d-flex gap-3 mt-3 flex-wrap">
+                <span style="font-size:0.72rem;color:#34D399;"><span style="display:inline-block;width:20px;height:2px;background:#34D399;vertical-align:middle;margin-right:4px;"></span>Normal ≤ 99 mg/dL</span>
+                <span style="font-size:0.72rem;color:#FBBF24;"><span style="display:inline-block;width:20px;height:2px;background:#FBBF24;vertical-align:middle;margin-right:4px;"></span>Prediabetes 100–125</span>
+                <span style="font-size:0.72rem;color:#F87171;"><span style="display:inline-block;width:20px;height:2px;background:#F87171;vertical-align:middle;margin-right:4px;"></span>Glucosa Alta ≥ 126</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="data-card">
+            <h6><i class="fas fa-tags me-2"></i>Distribución por Contexto</h6>
+            <div style="position:relative;height:220px;">
+                <canvas id="chartContext"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FILA 3: Fuente + Top críticos -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-5">
+        <div class="data-card">
+            <h6><i class="fas fa-microchip me-2"></i>Fuente de Registro (IoT / Digital Twin)</h6>
+            <div style="position:relative;height:200px;">
+                <canvas id="chartSource"></canvas>
+            </div>
+            <p style="color:#64748B;font-size:0.72rem;margin-top:12px;line-height:1.5;">
+                Las lecturas <strong style="color:#F472B6;">Simuladas</strong> representan el <em>Digital Twin</em> del glucómetro (Industria 4.0). Las lecturas de <strong style="color:#60A5FA;">Dispositivo</strong> provienen del endpoint de telemetría IoT.
+            </p>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="data-card">
+            <h6><i class="fas fa-user-injured me-2" style="color:#F87171;"></i>Top Pacientes con Más Lecturas Críticas</h6>
+            <div style="position:relative;height:200px;">
+                <canvas id="chartTopCritical"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+Chart.defaults.color = '#94A3B8';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+
+const glucoseDist = JSON.parse('{{ glucose_dist_json|escapejs }}');
+const dailyData = JSON.parse('{{ daily_data_json|escapejs }}');
+const avgData = JSON.parse('{{ avg_data_json|escapejs }}');
+const contextDist = JSON.parse('{{ context_dist_json|escapejs }}');
+const sourceDist = JSON.parse('{{ source_dist_json|escapejs }}');
+const topCritical = JSON.parse('{{ top_critical_json|escapejs }}');
+
+// 1. Doughnut — distribución glucémica
+new Chart(document.getElementById('chartDist'), {
+    type: 'doughnut',
+    data: {
+        labels: glucoseDist.labels,
+        datasets: [{ data: glucoseDist.data, backgroundColor: glucoseDist.colors, borderWidth: 0, hoverOffset: 6 }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12, font: { size: 11 } } } },
+        cutout: '65%',
+    }
+});
+
+// 2. Line — lecturas por día
+new Chart(document.getElementById('chartDaily'), {
+    type: 'line',
+    data: {
+        labels: dailyData.labels.length ? dailyData.labels : ['Sin datos'],
+        datasets: [{
+            label: 'Lecturas', data: dailyData.data.length ? dailyData.data : [0],
+            borderColor: '#60A5FA', backgroundColor: 'rgba(96,165,250,0.08)',
+            tension: 0.4, fill: true, pointRadius: 3, pointBackgroundColor: '#60A5FA',
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { font: { size: 10 } } },
+            y: { grid: { color: 'rgba(255,255,255,0.04)' }, beginAtZero: true, ticks: { stepSize: 1 } }
+        }
+    }
+});
+
+// 3. Line — promedio de glucosa con anotaciones ADA
+new Chart(document.getElementById('chartAvg'), {
+    type: 'line',
+    data: {
+        labels: avgData.labels.length ? avgData.labels : ['Sin datos'],
+        datasets: [
+            {
+                label: 'Promedio glucosa', data: avgData.data.length ? avgData.data : [0],
+                borderColor: '#34D399', backgroundColor: 'rgba(52,211,153,0.07)',
+                tension: 0.4, fill: true, pointRadius: 3, pointBackgroundColor: '#34D399',
+            },
+            {
+                label: 'Límite normal (99)', data: avgData.labels.map(() => 99),
+                borderColor: '#34D399', borderDash: [6,3], borderWidth: 1,
+                pointRadius: 0, fill: false,
+            },
+            {
+                label: 'Límite prediabetes (125)', data: avgData.labels.map(() => 125),
+                borderColor: '#FBBF24', borderDash: [6,3], borderWidth: 1,
+                pointRadius: 0, fill: false,
+            },
+            {
+                label: 'Glucosa alta (126+)', data: avgData.labels.map(() => 126),
+                borderColor: '#F87171', borderDash: [6,3], borderWidth: 1,
+                pointRadius: 0, fill: false,
+            },
+        ]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { font: { size: 10 } } },
+            y: { grid: { color: 'rgba(255,255,255,0.04)' }, min: 50, max: 300, ticks: { stepSize: 50 } }
+        }
+    }
+});
+
+// 4. Bar — contexto
+new Chart(document.getElementById('chartContext'), {
+    type: 'bar',
+    data: {
+        labels: contextDist.labels,
+        datasets: [{
+            label: 'Lecturas', data: contextDist.data,
+            backgroundColor: contextDist.colors, borderRadius: 8, borderWidth: 0,
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { display: false } },
+            y: { grid: { color: 'rgba(255,255,255,0.04)' }, beginAtZero: true, ticks: { stepSize: 1 } }
+        }
+    }
+});
+
+// 5. Bar — fuente
+new Chart(document.getElementById('chartSource'), {
+    type: 'bar',
+    data: {
+        labels: sourceDist.labels,
+        datasets: [{
+            label: 'Lecturas', data: sourceDist.data,
+            backgroundColor: sourceDist.colors, borderRadius: 8, borderWidth: 0,
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+            y: { grid: { color: 'rgba(255,255,255,0.04)' }, beginAtZero: true, ticks: { stepSize: 1 } }
+        }
+    }
+});
+
+// 6. Bar — top críticos
+new Chart(document.getElementById('chartTopCritical'), {
+    type: 'bar',
+    data: {
+        labels: topCritical.labels.length ? topCritical.labels : ['Sin datos'],
+        datasets: [{
+            label: 'Lecturas críticas', data: topCritical.data.length ? topCritical.data : [0],
+            backgroundColor: 'rgba(248,113,113,0.7)', borderRadius: 8, borderWidth: 0,
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.04)' }, beginAtZero: true, ticks: { stepSize: 1 } },
+            y: { grid: { display: false } }
+        }
+    }
+});
+</script>
+{% endblock %}

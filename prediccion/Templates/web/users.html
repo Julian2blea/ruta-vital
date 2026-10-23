@@ -1,0 +1,91 @@
+{% extends 'web/base.html' %}
+{% block title %}Usuarios — Ruta Vital{% endblock %}
+{% block page_title %}Gestión de Usuarios / Pacientes{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <span style="color:#94A3B8;font-size:0.875rem;">
+            <i class="fas fa-users me-2"></i>{{ total }} usuarios registrados en el sistema
+        </span>
+    </div>
+</div>
+
+<div class="data-card">
+    <h6><i class="fas fa-list me-2"></i>Lista de Usuarios</h6>
+    <div style="overflow-x:auto;">
+        <table class="tbl">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Usuario</th>
+                    <th>Nombre</th>
+                    <th>Correo</th>
+                    <th>Roles</th>
+                    <th>Estado</th>
+                    <th>Registro</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td class="text-sec" style="font-size:0.78rem;">{{ u.id }}</td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div style="width:32px;height:32px;border-radius:50%;background:#1E293B;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;color:#34D399;">
+                                {{ u.login|first|upper }}
+                            </div>
+                            <div>
+                                <div style="font-weight:600;">@{{ u.login }}</div>
+                                {% if u.is_staff %}
+                                    <div style="font-size:0.7rem;color:#FBBF24;">
+                                        <i class="fas fa-shield-alt"></i> is_staff
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        {% if u.person %}
+                            {{ u.person.first_name }} {{ u.person.last_name }}
+                        {% else %}
+                            <span class="text-sec">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-sec" style="font-size:0.82rem;">
+                        {% if u.person and u.person.email %}{{ u.person.email }}{% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% for role in u.roles.all %}
+                            {% if role.description == 'admin' %}
+                                <span class="bs" style="background:rgba(251,191,36,0.15);color:#FBBF24;">admin</span>
+                            {% else %}
+                                <span class="bs" style="background:rgba(96,165,250,0.15);color:#60A5FA;">{{ role.description }}</span>
+                            {% endif %}
+                        {% empty %}
+                            <span class="text-sec" style="font-size:0.78rem;">Sin rol</span>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {% if u.is_active %}
+                            <span class="bs bs-normal">Activo</span>
+                        {% else %}
+                            <span class="bs bs-high">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-sec" style="font-size:0.78rem;">{{ u.date_joined|date:"d/m/Y" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" style="text-align:center;padding:32px;color:#94A3B8;">
+                        No hay usuarios registrados
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

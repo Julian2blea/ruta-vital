@@ -29,6 +29,8 @@ urlpatterns = [
     # POST /api/token/refresh/  { refresh }  →  { access, refresh (rotado) }
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
+    path('web/',   include('prediccion.web_urls')),
+
     # Vistas web Django 
     path('', include('prediccion.urls')),
 ]

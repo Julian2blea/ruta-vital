@@ -1,6 +1,10 @@
 import os
+import dj_database_url
+from dotenv import load_dotenv
 from pathlib import Path
 from datetime import timedelta
+
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -14,12 +18,11 @@ SECRET_KEY = 'django-insecure-msotgmio863=%08lny98(a152ck$vbv!ep#*jq@u1zie=1m8(6
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['ruta-viatl-api-fbayadbtdxgaf4ga.brazilsouth-01.azurewebsites.net',
-                 '169.254.130.2',
-                 '10.189.244.124', 
+ALLOWED_HOSTS = [
                  'localhost', 
                  '127.0.0.1',
-                 '*'
+                 '.onrender.com',
+                 '*',
                  ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -42,11 +45,13 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -79,17 +84,29 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
-DATABASES = {
+if DATABASE_URL:
+    # Producción (Render) — PostgreSQL
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True,
+        )
+    }
+else:
+    # Desarrollo local — MySQL
+    DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
             'NAME': 'prediccion_db',
-            'USER': 'adminruta',
-            'PASSWORD': 'Juli0627#',
-            'HOST': 'ruta-vital-db.mysql.database.azure.com',
+            'USER': 'root',
+            'PASSWORD': os.environ.get('MYSQL_PASSWORD', 'tu_contraseña_local'),
+            'HOST': 'localhost',
             'PORT': '3306',
             'OPTIONS': {
-                'charset': 'utf8mb4'
+                'charset': 'utf8mb4',
             },
         }
     }
@@ -118,9 +135,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'es'
+LANGUAGE_CODE = 'es-co'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Bogota'
 
 USE_I18N = True
 
@@ -156,18 +173,16 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ]
 }
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME':  timedelta(minutes=15),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-
-    
     'ROTATE_REFRESH_TOKENS': True,
-
-    
     'BLACKLIST_AFTER_ROTATION': True,
-
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
 }
@@ -175,3 +190,10 @@ SIMPLE_JWT = {
 AUTH_USER_MODEL = 'prediccion.User'
 
 AUTHENTICATION_BACKENDS = ['django.contrib.auth.backends.ModelBackend']
+
+CORS_ALLOW_ALL_ORIGINS = True 
+
+STATTIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+

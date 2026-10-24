@@ -45,6 +45,11 @@
                 <i class="fas fa-brain"></i> Predicción IA
             </a>
         </div>
+        <div class="nav-item">
+            <a href="{% url 'web:digital-twin' %}" class="{% if request.resolver_match.url_name == 'digital-twin' %}active{% endif %}">
+                <i class="fas fa-satallite-dish"></i> Digital Twin / IoT
+            </a>
+        </div>
         <div class="nav-section">Sistema</div>
         <div class="nav-item">
             <a href="{% url 'web:logout' %}">

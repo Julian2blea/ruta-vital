@@ -3,6 +3,7 @@ from .models import (
     Person, User, Role, Permission,
     UserHasRole, RoleHasPermission,
     GlucoseReading, GlucoseRecommendation,
+    IoTDevice, TelemetryLog
 )
  
  
@@ -137,3 +138,56 @@ class GlucoseHistorySerializer(serializers.ModelSerializer):
             'reading_date',
         ]
         read_only_fields = fields
+
+
+class IoTDeviceSerializer(serializers.ModelSerializer):
+    user_login = serializers.CharField(source='user.login', read_only=True)
+    readings_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model  = IoTDevice
+        fields = [
+            'id', 'device_id', 'device_name', 'model_info',
+            'status', 'last_ping', 'registered_at',
+            'user_login', 'readings_count',
+        ]
+
+    def get_readings_count(self, obj):
+        return obj.telemetry_logs.count()
+
+
+class TelemetryIngestSerializer(serializers.Serializer):
+    """
+    Serializer para recibir telemetría desde un dispositivo IoT externo.
+    El dispositivo envía device_id + glucose_value + context.
+    """
+    device_id     = serializers.CharField(max_length=100)
+    glucose_value = serializers.FloatField(min_value=20, max_value=600)
+    context       = serializers.ChoiceField(
+                      choices=['fasting', 'postprandial', 'random'],
+                      default='random'
+                    )
+    notes         = serializers.CharField(max_length=500, required=False, allow_blank=True)
+    # Token de autenticación del dispositivo (para no usar JWT de usuario)
+    device_token  = serializers.CharField(max_length=200, required=False, allow_blank=True)
+
+
+class TelemetryLogSerializer(serializers.ModelSerializer):
+    device_id   = serializers.CharField(source='device.device_id', read_only=True)
+    user_login  = serializers.CharField(source='device.user.login', read_only=True)
+    glucose_value = serializers.SerializerMethodField()
+    status        = serializers.SerializerMethodField()
+
+    class Meta:
+        model  = TelemetryLog
+        fields = [
+            'id', 'device_id', 'user_login',
+            'glucose_value', 'status',
+            'received_at', 'signal_ok', 'raw_payload',
+        ]
+
+    def get_glucose_value(self, obj):
+        return obj.reading.glucose_value if obj.reading else None
+
+    def get_status(self, obj):
+        return obj.reading.status if obj.reading else None

@@ -11,4 +11,5 @@ urlpatterns = [
     path('users/',    web_views.users_view,    name='users'),
     path('readings/', web_views.readings_view, name='readings'),
     path('riesgo/',   web_views.risk_panel,   name='risk'),
+    path('digital-twin/', web_views.digital_twin, name='digital-twin'),
 ]

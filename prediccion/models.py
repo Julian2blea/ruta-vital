@@ -234,3 +234,64 @@ class GlucoseRecommendation(models.Model):
         db_table = 'glucose_recommendation'
         verbose_name = 'Glucose Recommendation'
         verbose_name_plural = 'Glucose Recommendations'
+
+
+class IoTDevice(models.Model):
+    """
+    Representa un glucómetro o sensor IoT registrado en el sistema.
+    Cada dispositivo está vinculado a un usuario (paciente).
+    Industria 4.0 — capa de conectividad de sensores.
+    """
+    STATUS_CHOICES = [
+        ('active',   'Active'),
+        ('inactive', 'Inactive'),
+        ('error',    'Error'),
+    ]
+
+    user         = models.ForeignKey(
+                     User, on_delete=models.CASCADE,
+                     related_name='devices'
+                   )
+    device_id    = models.CharField(max_length=100, unique=True)
+    device_name  = models.CharField(max_length=150, default='Glucómetro IoT')
+    model_info   = models.CharField(max_length=200, blank=True)
+    status       = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    last_ping    = models.DateTimeField(null=True, blank=True)
+    registered_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.device_name} [{self.device_id}] — {self.user.login}"
+
+    class Meta:
+        db_table      = 'iot_device'
+        verbose_name  = 'IoT Device'
+        verbose_name_plural = 'IoT Devices'
+        ordering = ['-registered_at']
+
+
+class TelemetryLog(models.Model):
+    """
+    Log de cada transmisión de telemetría recibida desde un dispositivo IoT.
+    Permite auditar y rastrear la actividad del sensor en tiempo real.
+    """
+    device       = models.ForeignKey(
+                     IoTDevice, on_delete=models.CASCADE,
+                     related_name='telemetry_logs'
+                   )
+    reading      = models.OneToOneField(
+                     GlucoseReading, on_delete=models.CASCADE,
+                     related_name='telemetry', null=True, blank=True
+                   )
+    raw_payload  = models.JSONField(default=dict)
+    received_at  = models.DateTimeField(auto_now_add=True)
+    ip_address   = models.GenericIPAddressField(null=True, blank=True)
+    signal_ok    = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"Telemetry [{self.device.device_id}] @ {self.received_at}"
+
+    class Meta:
+        db_table     = 'telemetry_log'
+        verbose_name = 'Telemetry Log'
+        verbose_name_plural = 'Telemetry Logs'
+        ordering = ['-received_at']

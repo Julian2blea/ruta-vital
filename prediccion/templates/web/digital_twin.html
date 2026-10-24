@@ -1,0 +1,305 @@
+{% extends 'web/base.html' %}
+{% block title %}Digital Twin / IoT — Ruta Vital{% endblock %}
+{% block page_title %}Digital Twin y Telemetría IoT{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+
+<!-- HEADER INDUSTRIA 4.0 -->
+<div style="background:linear-gradient(135deg,rgba(52,211,153,0.06),rgba(96,165,250,0.06));
+            border:1px solid rgba(52,211,153,0.2);border-radius:16px;padding:20px 24px;margin-bottom:24px;">
+    <div class="d-flex align-items-center gap-3 flex-wrap">
+        <div>
+            <div style="color:#34D399;font-weight:800;font-size:1rem;">
+                Digital Twin + IoT — Industria 4.0
+            </div>
+            <div style="color:#94A3B8;font-size:0.82rem;margin-top:3px;line-height:1.5;">
+                <strong style="color:#E2E8F0;">Digital Twin:</strong>
+                La pantalla de simulación de la app móvil es una réplica virtual del glucómetro físico —
+                genera lecturas con los mismos rangos que un sensor real, sin necesidad de hardware.<br>
+                <strong style="color:#E2E8F0;">IoT:</strong>
+                El endpoint <code style="color:#34D399;">/api/telemetry/ingest/</code>
+                recibe transmisiones directas de glucómetros físicos conectados a internet,
+                integrando la cadena sensor → nube → recomendación clínica en tiempo real.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KPIs IoT -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:rgba(52,211,153,0.12);">
+                <i class="fas fa-microchip" style="color:#34D399;"></i>
+            </div>
+            <div class="kpi-val" style="color:#34D399;">{{ total_devices }}</div>
+            <div class="kpi-lbl">Dispositivos registrados</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:rgba(96,165,250,0.12);">
+                <i class="fas fa-wifi" style="color:#60A5FA;"></i>
+            </div>
+            <div class="kpi-val" style="color:#60A5FA;">{{ active_devices }}</div>
+            <div class="kpi-lbl">Dispositivos activos</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:rgba(167,139,250,0.12);">
+                <i class="fas fa-satellite-dish" style="color:#A78BFA;"></i>
+            </div>
+            <div class="kpi-val" style="color:#A78BFA;">{{ total_logs }}</div>
+            <div class="kpi-lbl">Transmisiones totales</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:rgba(244,114,182,0.12);">
+                <i class="fas fa-clone" style="color:#F472B6;"></i>
+            </div>
+            <div class="kpi-val" style="color:#F472B6;">∞</div>
+            <div class="kpi-lbl">Instancias Digital Twin</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <!-- Gráfico origen de lecturas -->
+    <div class="col-lg-4">
+        <div class="data-card">
+            <h6><i class="fas fa-chart-pie me-2"></i>Origen de Lecturas en el Sistema</h6>
+            <div style="position:relative;height:220px;">
+                <canvas id="chartSource"></canvas>
+            </div>
+            <div style="margin-top:16px;padding:12px;background:rgba(244,114,182,0.06);
+                        border:1px solid rgba(244,114,182,0.15);border-radius:10px;">
+                <div style="color:#F472B6;font-size:0.75rem;font-weight:700;margin-bottom:4px;">
+                    <i class="fas fa-clone me-1"></i> Digital Twin
+                </div>
+                <div style="color:#94A3B8;font-size:0.72rem;line-height:1.5;">
+                    Las lecturas <em>simuladas</em> desde la app móvil son el
+                    <strong style="color:#E2E8F0;">gemelo digital</strong> del glucómetro:
+                    replican su comportamiento con los mismos rangos clínicos ADA sin hardware físico.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dispositivos registrados -->
+    <div class="col-lg-8">
+        <div class="data-card">
+            <h6><i class="fas fa-microchip me-2"></i>Dispositivos IoT Registrados</h6>
+            {% if devices %}
+            <div style="overflow-x:auto;">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>Device ID</th>
+                            <th>Nombre</th>
+                            <th>Paciente</th>
+                            <th>Estado</th>
+                            <th>Último ping</th>
+                            <th>Transmisiones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for device in devices %}
+                        <tr>
+                            <td>
+                                <code style="background:#1E293B;color:#34D399;padding:3px 8px;
+                                             border-radius:6px;font-size:0.78rem;">
+                                    {{ device.device_id }}
+                                </code>
+                            </td>
+                            <td style="font-weight:600;">{{ device.device_name }}</td>
+                            <td class="text-sec">@{{ device.user.login }}</td>
+                            <td>
+                                {% if device.status == 'active' %}
+                                    <span class="bs bs-normal">
+                                        <span style="display:inline-block;width:6px;height:6px;
+                                                     border-radius:50%;background:#34D399;
+                                                     margin-right:5px;box-shadow:0 0 4px #34D399;"></span>
+                                        Activo
+                                    </span>
+                                {% elif device.status == 'error' %}
+                                    <span class="bs bs-high">Error</span>
+                                {% else %}
+                                    <span class="bs" style="background:rgba(148,163,184,0.1);color:#94A3B8;">
+                                        Inactivo
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-sec" style="font-size:0.78rem;">
+                                {% if device.last_ping %}
+                                    {{ device.last_ping|date:"d/m/Y H:i" }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td style="font-weight:600;">{{ device.telemetry_logs.count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div style="text-align:center;padding:32px;color:#475569;">
+                <i class="fas fa-microchip" style="font-size:2rem;margin-bottom:12px;display:block;"></i>
+                Sin dispositivos IoT registrados aún.<br>
+                <span style="font-size:0.8rem;">Los dispositivos se registran automáticamente al enviar
+                telemetría al endpoint <code>/api/telemetry/ingest/</code></span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Log de telemetría -->
+<div class="data-card mb-4">
+    <h6><i class="fas fa-stream me-2" style="color:#A78BFA;"></i>Log de Transmisiones IoT en Tiempo Real</h6>
+    {% if logs %}
+    <div style="overflow-x:auto;">
+        <table class="tbl">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Dispositivo</th>
+                    <th>Paciente</th>
+                    <th>Glucosa</th>
+                    <th>Estado</th>
+                    <th>IP Origen</th>
+                    <th>Señal</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td style="font-size:0.78rem;color:#60A5FA;white-space:nowrap;">
+                        {{ log.received_at|date:"d/m/Y H:i:s" }}
+                    </td>
+                    <td>
+                        <code style="background:#1E293B;color:#34D399;padding:2px 7px;
+                                     border-radius:5px;font-size:0.75rem;">
+                            {{ log.device.device_id }}
+                        </code>
+                    </td>
+                    <td class="text-sec" style="font-size:0.82rem;">
+                        @{{ log.device.user.login }}
+                    </td>
+                    <td style="font-weight:700;">
+                        {% if log.reading %}
+                            {{ log.reading.glucose_value }}
+                            <span class="text-sec" style="font-size:0.75rem;">mg/dL</span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if log.reading %}
+                            {% if log.reading.status == 'normal' %}
+                                <span class="bs bs-normal">Normal</span>
+                            {% elif log.reading.status == 'prediabetes' %}
+                                <span class="bs bs-prediabetes">Prediabetes</span>
+                            {% elif log.reading.status == 'high_glucose' %}
+                                <span class="bs bs-high">Glucosa Alta</span>
+                            {% else %}
+                                <span class="bs bs-hypo">Hipoglucemia</span>
+                            {% endif %}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="text-sec" style="font-size:0.78rem;">
+                        {{ log.ip_address|default:"—" }}
+                    </td>
+                    <td>
+                        {% if log.signal_ok %}
+                            <span style="color:#34D399;font-size:0.78rem;">
+                                <i class="fas fa-signal"></i> OK
+                            </span>
+                        {% else %}
+                            <span style="color:#F87171;font-size:0.78rem;">
+                                <i class="fas fa-exclamation-triangle"></i> Error
+                            </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:32px;color:#475569;">
+        <i class="fas fa-satellite-dish" style="font-size:2rem;margin-bottom:12px;display:block;"></i>
+        Sin transmisiones IoT registradas aún.
+    </div>
+    {% endif %}
+</div>
+
+<!-- Marco conceptual Industria 4.0 / 5.0 -->
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="data-card">
+            <h6 style="color:#34D399;"><i class="fas fa-industry me-2"></i>Industria 4.0 en Ruta Vital</h6>
+            <div style="display:flex;flex-direction:column;gap:14px;margin-top:8px;">
+                {% for item in conceptos_40 %}
+                <div style="display:flex;gap:12px;align-items:flex-start;">
+                    <div class="concept-icon-wrapper" style="background-color: {{ item.bg }};">
+                        <i class="fas fa-{{ item.icon }} concept-icon" style="color: {{ item.color }};"></i>
+                    </div>
+                    <div>
+                        <div class="concept-title">{{ item.title }}</div>
+                        <div class="concept-desc">{{ item.desc }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="data-card">
+            <h6 style="color:#A78BFA;"><i class="fas fa-heart me-2"></i>Industria 5.0 en Ruta Vital</h6>
+            <div style="display:flex;flex-direction:column;gap:14px;margin-top:8px;">
+                {% for item in conceptos_50 %}
+                <div style="display:flex;gap:12px;align-items:flex-start;">
+                    <div class="concept-icon-wrapper" style="background-color: {{ item.bg }};">
+                        <i class="fas fa-{{ item.icon }} concept-icon" style="color: {{ item.color }};"></i>
+                    </div>
+                    <div>
+                        <div class="concept-title">{{ item.title }}</div>
+                        <div class="concept-desc">{{ item.desc }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const sourceData = JSON.parse('{{ source_chart_json|escapejs }}');
+Chart.defaults.color = '#94A3B8';
+new Chart(document.getElementById('chartSource'), {
+    type: 'doughnut',
+    data: {
+        labels: sourceData.labels,
+        datasets: [{
+            data: sourceData.data,
+            backgroundColor: sourceData.colors,
+            borderWidth: 0,
+            hoverOffset: 6,
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10, font: { size: 10 } } } },
+        cutout: '60%',
+    }
+});
+</script>
+{% endblock %}

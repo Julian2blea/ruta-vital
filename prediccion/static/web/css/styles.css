@@ -113,3 +113,18 @@ body { background: var(--bg-main); color: var(--text); font-family: 'Segoe UI', 
 .risk-pct-text {
     font-weight: 700; font-size: 0.83rem; white-space: nowrap;
 }
+
+/* ── CONCEPTOS INDUSTRIA 4.0 / 5.0 ── */
+.concept-icon-wrapper {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.concept-icon {
+    font-size: 0.9rem;
+}
+.concept-title {
+    font-weight: 700; font-size: 0.85rem; color: #E2E8F0;
+}
+.concept-desc {
+    color: #94A3B8; font-size: 0.78rem; margin-top: 2px; line-height: 1.5;
+}

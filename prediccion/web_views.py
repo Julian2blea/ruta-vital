@@ -8,7 +8,7 @@ from datetime import timedelta
 from functools import wraps
 import json
 
-from .models import User, GlucoseReading, Role, Permission, RoleHasPermission
+from .models import User, GlucoseReading, Role, Permission, RoleHasPermission, IoTDevice, TelemetryLog
 
 
 # ─── Helpers de acceso ────────────────────────────────────────────────────────
@@ -316,3 +316,80 @@ def risk_panel(request):
         'low':             low,
     }
     return render(request, 'web/risk_panel.html', ctx)
+
+@admin_required
+def digital_twin(request):
+    """
+    Panel Digital Twin / IoT para administradores.
+    Muestra el estado en tiempo real de todos los dispositivos registrados,
+    logs de telemetría y el gemelo digital de la red de glucómetros.
+    """
+    from django.db.models import Count, Avg
+
+    devices = IoTDevice.objects.select_related('user', 'user__person').order_by('-last_ping')
+    logs    = TelemetryLog.objects.select_related(
+                'device', 'device__user', 'reading'
+              ).order_by('-received_at')[:40]
+
+    total_devices  = devices.count()
+    active_devices = devices.filter(status='active').count()
+    total_logs     = TelemetryLog.objects.count()
+
+    # Lecturas por fuente para el gráfico de origen
+    from prediccion.models import GlucoseReading
+    from django.db.models import Count as DCount
+    source_stats = (
+        GlucoseReading.objects
+        .values('source')
+        .annotate(count=DCount('id'))
+        .order_by('-count')
+    )
+
+    SOURCE_LABELS = {
+        'manual':    'Manual (app móvil)',
+        'simulated': 'Digital Twin (simulación)',
+        'device':    'IoT (glucómetro físico)',
+    }
+    source_chart = {
+        'labels': [SOURCE_LABELS.get(s['source'], s['source']) for s in source_stats],
+        'data':   [s['count'] for s in source_stats],
+        'colors': ['#60A5FA', '#F472B6', '#34D399'],
+    }
+
+    ctx = {
+        'devices':       devices,
+        'logs':          logs,
+        'total_devices': total_devices,
+        'active_devices':active_devices,
+        'total_logs':    total_logs,
+        'source_chart_json': json.dumps(source_chart),
+        'conceptos_40': [
+        {'icon': 'satellite-dish', 'color': '#34D399', 'bg': 'rgba(52,211,153,0.12)',
+         'title': 'IoT — Internet de las Cosas',
+         'desc':  'Endpoint /api/telemetry/ingest/ recibe datos de glucómetros físicos conectados a internet en tiempo real.'},
+        {'icon': 'brain', 'color': '#A78BFA', 'bg': 'rgba(167,139,250,0.12)',
+         'title': 'IA & Machine Learning',
+         'desc':  'RandomForest predice el nivel de riesgo glucémico analizando patrones de las últimas 10 lecturas por paciente.'},
+        {'icon': 'cloud', 'color': '#60A5FA', 'bg': 'rgba(96,165,250,0.12)',
+         'title': 'Cloud Computing',
+         'desc':  'Backend Django en Render, base de datos PostgreSQL administrada. Disponibilidad 24/7 desde cualquier dispositivo.'},
+        {'icon': 'clone', 'color': '#F472B6', 'bg': 'rgba(244,114,182,0.12)',
+         'title': 'Gemelo Digital (Digital Twin)',
+         'desc':  'La simulación de lecturas en la app replica el comportamiento exacto de un glucómetro físico con perfiles clínicos ADA.'},
+    ],
+    'conceptos_50': [
+        {'icon': 'user-md', 'color': '#34D399', 'bg': 'rgba(52,211,153,0.12)',
+         'title': 'Human-in-the-Loop',
+         'desc':  'La IA predice el riesgo pero el médico/admin decide la intervención. La tecnología amplifica el juicio humano sin reemplazarlo.'},
+        {'icon': 'hands-helping', 'color': '#FBBF24', 'bg': 'rgba(251,191,36,0.12)',
+         'title': 'Personalización Masiva',
+         'desc':  'Cada paciente recibe recomendaciones individualizadas según su valor, contexto y perfil de riesgo único, no respuestas genéricas.'},
+        {'icon': 'leaf', 'color': '#A78BFA', 'bg': 'rgba(167,139,250,0.12)',
+         'title': 'Sostenibilidad Social',
+         'desc':  'Ruta Vital democratiza el acceso a orientación clínica glucémica para comunidades sin acceso regular a especialistas médicos.'},
+        {'icon': 'shield-alt', 'color': '#60A5FA', 'bg': 'rgba(96,165,250,0.12)',
+         'title': 'Resiliencia del Sistema',
+         'desc':  'Arquitectura desacoplada: si el modelo de IA falla, el sistema de clasificación ADA sigue operando de forma independiente.'},
+    ],
+    }
+    return render(request, 'web/digital_twin.html', ctx)

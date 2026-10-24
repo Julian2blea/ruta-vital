@@ -90,3 +90,26 @@ body { background: var(--bg-main); color: var(--text); font-family: 'Segoe UI', 
 .error-msg { background: #7F1D1D; color: #FCA5A5; border-radius: 10px; padding: 11px 14px; font-size: 0.845rem; margin-bottom: 16px; }
 
 @media (max-width: 768px) { .sidebar { display: none; } .main-content { margin-left: 0; } }
+
+/* ── RISK PANEL DYNAMICS ── */
+.risk-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.8rem;
+}
+.risk-badge {
+    border-width: 1px; border-style: solid;
+}
+.risk-progress-wrap {
+    display: flex; align-items: center; gap: 10px;
+}
+.risk-progress-bg {
+    flex: 1; height: 6px; background: #1E293B;
+    border-radius: 3px; overflow: hidden;
+}
+.risk-progress-fill {
+    height: 100%; border-radius: 3px; transition: width 0.6s ease;
+}
+.risk-pct-text {
+    font-weight: 700; font-size: 0.83rem; white-space: nowrap;
+}

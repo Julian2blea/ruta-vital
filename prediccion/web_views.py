@@ -269,3 +269,50 @@ def readings_view(request):
     ],
     }
     return render(request, 'web/readings.html', ctx)
+
+
+@admin_required
+def risk_panel(request):
+    """Vista de panel de riesgo IA para administradores."""
+    from prediccion.ml.predict import predict_user_risk
+
+    users   = User.objects.filter(is_staff=False).select_related('person').prefetch_related('readings', 'roles')
+    results = []
+    model_available = True
+
+    for user in users:
+        try:
+            risk = predict_user_risk(user)
+            readings_count = user.readings.count()
+            results.append({
+                'user':           user,
+                'risk':           risk,
+                'readings_count': readings_count,
+            })
+        except FileNotFoundError:
+            model_available = False
+            break
+        except Exception:
+            results.append({
+                'user':           user,
+                'risk':           {'risk_label': 'Error', 'color': '#94A3B8', 'risk_percentage': None, 'icon': 'question-circle'},
+                'readings_count': user.readings.count(),
+            })
+
+    results.sort(key=lambda x: (x['risk']['risk_level'] or -1), reverse=True)
+
+    # Estadísticas de riesgo
+    total     = len(results)
+    high      = sum(1 for r in results if r['risk'].get('risk_level') == 2)
+    medium    = sum(1 for r in results if r['risk'].get('risk_level') == 1)
+    low       = sum(1 for r in results if r['risk'].get('risk_level') == 0)
+
+    ctx = {
+        'results':         results,
+        'model_available': model_available,
+        'total':           total,
+        'high':            high,
+        'medium':          medium,
+        'low':             low,
+    }
+    return render(request, 'web/risk_panel.html', ctx)

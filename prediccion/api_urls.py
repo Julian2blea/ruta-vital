@@ -1,5 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from .api_views import predict_risk, all_users_risk
 from .api_views import (
     PersonViewSet,
     UserViewSet,
@@ -24,6 +25,8 @@ urlpatterns = [
     path('auth/register/', api_register, name='api-register'),
     path('auth/logout/',   api_logout,   name='api-logout'),
     path('auth/reset-password/', api_reset_password, name='api-reset-password'),
+    path('predictions/risk/',       predict_risk,      name='predict-risk'),
+    path('predictions/all-risks/',  all_users_risk,    name='all-risks'),
 
     # ── REST ViewSets ─────────────────────────────────────────
     path('', include(router.urls)),

@@ -35,3 +35,6 @@ Thumbs.db
 *.sql
 *.sqlite
 *.db
+
+# Modelos serializados de IA
+*.pkl

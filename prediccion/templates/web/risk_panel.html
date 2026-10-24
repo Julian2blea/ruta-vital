@@ -1,0 +1,165 @@
+{% extends 'web/base.html' %}
+{% block title %}Predicción IA — Ruta Vital{% endblock %}
+{% block page_title %}Panel de Predicción de Riesgo (IA){% endblock %}
+
+{% block content %}
+
+<!-- HEADER INDUSTRIA 4.0 -->
+<div style="background:linear-gradient(135deg,rgba(96,165,250,0.08),rgba(167,139,250,0.08));
+            border:1px solid rgba(96,165,250,0.2);border-radius:16px;padding:20px 24px;margin-bottom:24px;">
+    <div class="d-flex align-items-center gap-3">
+        <div style="font-size:2rem;">🤖</div>
+        <div>
+            <div style="color:#60A5FA;font-weight:800;font-size:1rem;">
+                Módulo de Inteligencia Artificial 
+            </div>
+            <div style="color:#94A3B8;font-size:0.82rem;margin-top:3px;">
+                Clasificador RandomForest entrenado con datos glucémicos ADA 2024.
+                Analiza patrones de las últimas 10 lecturas por paciente para predecir riesgo clínico.
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if not model_available %}
+<div style="background:#7F1D1D;color:#FCA5A5;border-radius:12px;padding:16px 20px;margin-bottom:20px;">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <strong>Modelo de IA no disponible.</strong>
+    Ejecuta <code>python manage.py train_model</code> en el servidor para activar la predicción.
+</div>
+{% endif %}
+
+<!-- KPIs de riesgo -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:rgba(96,165,250,0.12);">
+                <i class="fas fa-users" style="color:#60A5FA;"></i>
+            </div>
+            <div class="kpi-val" style="color:#60A5FA;">{{ total }}</div>
+            <div class="kpi-lbl">Pacientes analizados</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:rgba(248,113,113,0.12);">
+                <i class="fas fa-times-circle" style="color:#F87171;"></i>
+            </div>
+            <div class="kpi-val" style="color:#F87171;">{{ high }}</div>
+            <div class="kpi-lbl">Riesgo Alto</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:rgba(251,191,36,0.12);">
+                <i class="fas fa-exclamation-triangle" style="color:#FBBF24;"></i>
+            </div>
+            <div class="kpi-val" style="color:#FBBF24;">{{ medium }}</div>
+            <div class="kpi-lbl">Riesgo Medio</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:rgba(52,211,153,0.12);">
+                <i class="fas fa-check-circle" style="color:#34D399;"></i>
+            </div>
+            <div class="kpi-val" style="color:#34D399;">{{ low }}</div>
+            <div class="kpi-lbl">Riesgo Bajo</div>
+        </div>
+    </div>
+</div>
+
+<!-- TABLA DE PREDICCIONES -->
+<div class="data-card">
+    <h6><i class="fas fa-robot me-2" style="color:#60A5FA;"></i>Predicción de Riesgo por Paciente</h6>
+    <div style="overflow-x:auto;">
+        <table class="tbl">
+            <thead>
+                <tr>
+                    <th>Paciente</th>
+                    <th>Nombre</th>
+                    <th>Riesgo Predicho</th>
+                    <th>Confianza del Modelo</th>
+                    <th>Lecturas Analizadas</th>
+                    <th>Indicador</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results %}
+                <tr>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div class="risk-avatar" style="background-color: {{ item.risk.color }}22; color: {{ item.risk.color }};">
+                                {{ item.user.login|first|upper }}
+                            </div>
+                            <span style="font-weight:600;">@{{ item.user.login }}</span>
+                        </div>
+                    </td>
+                    <td class="text-sec">
+                        {% if item.user.person %}
+                            {{ item.user.person.first_name }} {{ item.user.person.last_name }}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        <span class="bs risk-badge" style="background-color: {{ item.risk.color }}22; color: {{ item.risk.color }}; border-color: {{ item.risk.color }}44;">
+                            <i class="fas fa-{{ item.risk.icon }} me-1"></i>
+                            {{ item.risk.risk_label }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if item.risk.risk_percentage %}
+                            <div class="risk-progress-wrap">
+                                <div class="risk-progress-bg">
+                                    <div class="risk-progress-fill" style="width: {{ item.risk.risk_percentage }}%; background-color: {{ item.risk.color }};"></div>
+                                </div>
+                                <span class="risk-pct-text" style="color: {{ item.risk.color }};">
+                                    {{ item.risk.risk_percentage }}%
+                                </span>
+                            </div>
+                        {% else %}
+                            <span class="text-sec" style="font-size:0.78rem;">Sin datos</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span style="font-weight:600;">{{ item.readings_count }}</span>
+                        <span class="text-sec" style="font-size:0.78rem;"> lecturas</span>
+                    </td>
+                    <td>
+                        {% if item.risk.risk_level == 2 %}
+                            <div style="width:10px;height:10px;border-radius:50%;background-color:#F87171;box-shadow:0 0 8px #F87171;display:inline-block;"></div>
+                        {% elif item.risk.risk_level == 1 %}
+                            <div style="width:10px;height:10px;border-radius:50%;background-color:#FBBF24;box-shadow:0 0 8px #FBBF24;display:inline-block;"></div>
+                        {% elif item.risk.risk_level == 0 %}
+                            <div style="width:10px;height:10px;border-radius:50%;background-color:#34D399;box-shadow:0 0 8px #34D399;display:inline-block;"></div>
+                        {% else %}
+                            <div style="width:10px;height:10px;border-radius:50%;background-color:#475569;display:inline-block;"></div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align:center;padding:32px;color:#94A3B8;">
+                        No hay pacientes registrados para analizar
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div style="margin-top:20px;padding:16px;background:rgba(167,139,250,0.06);
+                border:1px solid rgba(167,139,250,0.15);border-radius:12px;">
+        <div style="color:#A78BFA;font-weight:700;font-size:0.82rem;margin-bottom:8px;">
+            <i class="fas fa-info-circle me-2"></i>Nota técnica — Human-in-the-Loop (Industria 5.0)
+        </div>
+        <div style="color:#94A3B8;font-size:0.78rem;line-height:1.6;">
+            El modelo de IA asiste al médico/administrador en la identificación de pacientes de riesgo,
+            pero <strong style="color:#E2E8F0;">no reemplaza el diagnóstico clínico profesional</strong>.
+            El administrador evalúa la predicción y decide la intervención apropiada —
+            esto es el principio <em>Human-in-the-Loop</em> de la Industria 5.0.
+            la IA amplifica la capacidad humana sin sustituir el juicio experto.
+        </div>
+    </div>
+</div>
+
+{% endblock %}

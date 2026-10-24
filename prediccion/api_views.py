@@ -1,5 +1,7 @@
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
+from rest_framework.decorators import api_view as drf_api_view, permission_classes as drf_permission_classes
+from rest_framework.permissions import IsAuthenticated as DRFIsAuthenticated
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
  
@@ -192,4 +194,60 @@ class UserHasRoleViewSet(viewsets.ModelViewSet):
         except User.DoesNotExist:
             return Response({"error": "Usuario no encontrado"}, status=404)
         except Role.DoesNotExist:
-            return Response({"error": "Rol no encontrado"}, status=404)   
+            return Response({"error": "Rol no encontrado"}, status=404)
+
+@drf_api_view(['GET'])
+@drf_permission_classes([DRFIsAuthenticated])
+def predict_risk(request):
+    """
+    GET /api/predictions/risk/
+    Retorna el nivel de riesgo glucémico del usuario autenticado
+    basado en sus últimas 10 lecturas usando el modelo de ML.
+    """
+    try:
+        from prediccion.ml.predict import predict_user_risk
+        result = predict_user_risk(request.user)
+        return Response(result, status=status.HTTP_200_OK)
+    except FileNotFoundError:
+        return Response(
+            {'error': 'Modelo de IA no disponible. Contacta al administrador.'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
+    except Exception as e:
+        return Response(
+            {'error': f'Error en predicción: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@drf_api_view(['GET'])
+@drf_permission_classes([DRFIsAuthenticated])
+def all_users_risk(request):
+    """
+    GET /api/predictions/all-risks/
+    Solo para admins — retorna riesgo de todos los pacientes.
+    """
+    from prediccion.ml.predict import predict_user_risk
+
+    if not (request.user.is_staff or
+            request.user.roles.filter(description='admin').exists()):
+        return Response({'error': 'Acceso denegado'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        users   = User.objects.filter(is_staff=False).prefetch_related('readings', 'person')
+        results = []
+        for user in users:
+            risk = predict_user_risk(user)
+            results.append({
+                'user_id':   user.id,
+                'login':     user.login,
+                'name':      f"{user.person.first_name} {user.person.last_name}" if user.person else user.login,
+                **risk,
+            })
+        results.sort(key=lambda x: (x['risk_level'] or -1), reverse=True)
+        return Response(results, status=status.HTTP_200_OK)
+    except FileNotFoundError:
+        return Response(
+            {'error': 'Modelo de IA no disponible.'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE
+        )   

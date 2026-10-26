@@ -229,17 +229,35 @@ def eda(request):
 
 @admin_required
 def users_view(request):
+    from django.db.models import Q
+    import json # Asegúrate de que json esté importado al inicio de web_views.py
+
+    search = request.GET.get('search', '').strip()
+
     users = (
         User.objects
         .select_related('person')
         .prefetch_related('roles')
         .order_by('-date_joined')
     )
+
+    if search:
+        users = users.filter(
+            Q(login__icontains=search) |
+            Q(person__first_name__icontains=search) |
+            Q(person__last_name__icontains=search)
+        )
+        
+    # Construcción del diccionario de roles para el frontend
+    user_role_map = {u.id: [r.id for r in u.roles.all()] for u in users}
+
     roles = Role.objects.all()
     ctx = {
-        'users': users,
-        'roles': roles,
-        'total': users.count(),
+        'users':  users,
+        'roles':  roles,
+        'total':  users.count(),
+        'search': search,
+        'user_role_map_json': json.dumps(user_role_map), # Se envía directamente como JSON
     }
     return render(request, 'web/users.html', ctx)
 
@@ -393,3 +411,41 @@ def digital_twin(request):
     ],
     }
     return render(request, 'web/digital_twin.html', ctx)
+
+@admin_required
+def assign_role_web(request):
+    """
+    POST /web/users/assign-role/
+    Actualiza los roles de un usuario desde el panel web.
+    """
+    from .models import UserHasRole
+
+    if request.method != 'POST':
+        return redirect('web:users')
+
+    user_id  = request.POST.get('user_id')
+    role_ids = request.POST.getlist('roles')   
+
+    try:
+        target_user = User.objects.get(id=user_id)
+
+       
+        if target_user.is_staff and '1' not in role_ids:
+            messages.error(request, f'No se puede modificar los roles del superusuario @{target_user.login}.')
+            return redirect('web:users')
+
+        # Borrar roles actuales y asignar los seleccionados
+        UserHasRole.objects.filter(user=target_user).delete()
+        for role_id in role_ids:
+            try:
+                role = Role.objects.get(id=role_id)
+                UserHasRole.objects.get_or_create(user=target_user, role=role)
+            except Role.DoesNotExist:
+                pass
+
+        messages.success(request, f'Roles de @{target_user.login} actualizados correctamente.')
+
+    except User.DoesNotExist:
+        messages.error(request, 'Usuario no encontrado.')
+
+    return redirect('web:users')

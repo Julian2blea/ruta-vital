@@ -4,14 +4,42 @@
 
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <span style="color:#94A3B8;font-size:0.875rem;">
-            <i class="fas fa-users me-2"></i>{{ total }} usuarios registrados en el sistema
-        </span>
-    </div>
+<!-- BARRA SUPERIOR: contador + buscador -->
+<div class="d-flex justify-content-between align-items-center gap-3 mb-4 flex-wrap">
+    <span style="color:#94A3B8;font-size:0.875rem;">
+        <i class="fas fa-users me-2"></i>{{ total }} usuario{{ total|pluralize }} encontrado{{ total|pluralize }}
+    </span>
+
+    <!-- Buscador -->
+    <form method="GET" action="{% url 'web:users' %}" class="d-flex align-items-center gap-2">
+        <div style="position:relative;">
+            <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#475569;font-size:0.8rem;"></i>
+            <input
+                type="text"
+                name="search"
+                value="{{ search }}"
+                placeholder="Buscar por nombre o usuario..."
+                style="background:#0F172A;border:1px solid #334155;color:#E2E8F0;border-radius:10px;
+                       padding:9px 14px 9px 34px;font-size:0.845rem;outline:none;width:240px;"
+                onfocus="this.style.borderColor='#34D399'"
+                onblur="this.style.borderColor='#334155'"
+            >
+        </div>
+        <button type="submit"
+            style="background:#34D399;color:white;border:none;border-radius:10px;
+                   padding:9px 16px;font-size:0.845rem;font-weight:700;cursor:pointer;">
+            Buscar
+        </button>
+        {% if search %}
+        <a href="{% url 'web:users' %}"
+           style="color:#94A3B8;font-size:0.82rem;text-decoration:none;padding:9px 10px;">
+            <i class="fas fa-times"></i> Limpiar
+        </a>
+        {% endif %}
+    </form>
 </div>
 
+<!-- TABLA DE USUARIOS -->
 <div class="data-card">
     <h6><i class="fas fa-list me-2"></i>Lista de Usuarios</h6>
     <div style="overflow-x:auto;">
@@ -25,6 +53,7 @@
                     <th>Roles</th>
                     <th>Estado</th>
                     <th>Registro</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -33,14 +62,16 @@
                     <td class="text-sec" style="font-size:0.78rem;">{{ u.id }}</td>
                     <td>
                         <div style="display:flex;align-items:center;gap:10px;">
-                            <div style="width:32px;height:32px;border-radius:50%;background:#1E293B;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;color:#34D399;">
+                            <div style="width:32px;height:32px;border-radius:50%;background:#1E293B;
+                                        display:flex;align-items:center;justify-content:center;
+                                        font-weight:700;font-size:0.8rem;color:#34D399;">
                                 {{ u.login|first|upper }}
                             </div>
                             <div>
                                 <div style="font-weight:600;">@{{ u.login }}</div>
                                 {% if u.is_staff %}
                                     <div style="font-size:0.7rem;color:#FBBF24;">
-                                        <i class="fas fa-shield-alt"></i> is_staff
+                                        <i class="fas fa-shield-alt"></i> superusuario
                                     </div>
                                 {% endif %}
                             </div>
@@ -75,11 +106,26 @@
                         {% endif %}
                     </td>
                     <td class="text-sec" style="font-size:0.78rem;">{{ u.date_joined|date:"d/m/Y" }}</td>
+                    <td>
+                        <button
+                            class="btn-edit-roles"
+                            data-user-id="{{ u.id }}"
+                            data-user-login="{{ u.login }}"
+                            style="background:rgba(96,165,250,0.12);color:#60A5FA;border:1px solid rgba(96,165,250,0.25);
+                                   border-radius:8px;padding:6px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;"
+                        >
+                            <i class="fas fa-user-tag me-1"></i> Editar roles
+                        </button>
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7" style="text-align:center;padding:32px;color:#94A3B8;">
-                        No hay usuarios registrados
+                    <td colspan="8" style="text-align:center;padding:32px;color:#94A3B8;">
+                        {% if search %}
+                            No se encontraron usuarios con "{{ search }}"
+                        {% else %}
+                            No hay usuarios registrados
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
@@ -88,4 +134,136 @@
     </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════════
+     MODAL — Editar roles del usuario
+══════════════════════════════════════════════════════════ -->
+<div id="roleModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);
+     z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:#0F172A;border:1px solid #1E293B;border-radius:24px;
+                padding:28px;width:100%;max-width:420px;margin:24px;">
+
+        <!-- Encabezado del modal -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <div>
+                <div style="color:#60A5FA;font-size:0.72rem;font-weight:700;text-transform:uppercase;
+                             letter-spacing:0.5px;margin-bottom:4px;">
+                    <i class="fas fa-user-tag me-1"></i> Editar roles
+                </div>
+                <div id="modalUserTitle" style="color:white;font-size:1.1rem;font-weight:800;"></div>
+            </div>
+            <button id="closeModal"
+                style="background:#1E293B;border:none;color:#94A3B8;border-radius:8px;
+                       width:32px;height:32px;cursor:pointer;font-size:1rem;">
+                ✕
+            </button>
+        </div>
+
+        <!-- Formulario de roles -->
+<form id="roleForm" method="POST" action="{% url 'web:assign_role' %}">
+    {% csrf_token %}
+    <input type="hidden" name="user_id" id="modalUserId">
+
+    <div style="color:#94A3B8;font-size:0.8rem;margin-bottom:14px;">
+        Selecciona los roles para este usuario:
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px;">
+        {% for role in roles %}
+        <label style="display:flex;align-items:center;gap:12px;padding:12px 14px;
+                       background:#1E293B;border-radius:12px;cursor:pointer;
+                       border:1px solid #334155;transition:border-color 0.2s;"
+               id="roleLabel_{{ role.id }}"
+               onmouseover="this.style.borderColor='#34D399'"
+               onmouseout="updateLabelBorder({{ role.id }})">
+            <input
+                type="checkbox"
+                name="roles"
+                value="{{ role.id }}"
+                class="role-checkbox"
+                data-role-id="{{ role.id }}"
+                id="roleCheck_{{ role.id }}"
+                style="width:16px;height:16px;accent-color:#34D399;cursor:pointer;"
+                onchange="updateLabelBorder({{ role.id }})"
+            >
+            <div>
+                <div class="modal-role-title {% if role.description == 'admin' %}modal-role-admin{% else %}modal-role-standard{% endif %}">
+                    {{ role.description }}
+                </div>
+                <div style="color:#64748B;font-size:0.72rem;margin-top:2px;">
+                    {% if role.description == 'admin' %}
+                        Acceso completo al panel web y datos globales
+                    {% elif role.description == 'patient' %}
+                        Registro de lecturas y acceso a historial propio
+                    {% else %}
+                        Rol personalizado del sistema
+                    {% endif %}
+                </div>
+            </div>
+        </label>
+        {% endfor %}
+    </div>
+
+    <div style="display:flex;gap:10px;">
+        <button type="submit"
+            style="flex:1;background:#34D399;color:white;border:none;border-radius:12px;
+                   padding:13px;font-weight:700;font-size:0.9rem;cursor:pointer;">
+            <i class="fas fa-save me-2"></i>Guardar cambios
+        </button>
+        <button type="button" id="cancelModal"
+            style="background:#1E293B;color:#94A3B8;border:1px solid #334155;
+                   border-radius:12px;padding:13px 18px;cursor:pointer;font-size:0.875rem;">
+            Cancelar
+        </button>
+    </div>
+</form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Mapa de roles actuales por usuario (generado por Django)
+const userRoleMap = JSON.parse('{{ user_role_map_json|escapejs }}');
+
+// Actualiza el borde del label según el estado del checkbox
+function updateLabelBorder(roleId) {
+    const cb    = document.getElementById('roleCheck_' + roleId);
+    const label = document.getElementById('roleLabel_' + roleId);
+    if (label) {
+        label.style.borderColor = cb && cb.checked ? '#34D399' : '#334155';
+    }
+}
+
+// Abrir modal
+document.querySelectorAll('.btn-edit-roles').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const userId    = btn.dataset.userId;
+        const userLogin = btn.dataset.userLogin;
+        const currentRoles = userRoleMap[userId] || [];
+
+        document.getElementById('modalUserId').value       = userId;
+        document.getElementById('modalUserTitle').textContent = '@' + userLogin;
+
+        // Marcar checkboxes según roles actuales
+        document.querySelectorAll('.role-checkbox').forEach(cb => {
+            const rid     = parseInt(cb.dataset.roleId);
+            cb.checked    = currentRoles.includes(rid);
+            updateLabelBorder(rid);
+        });
+
+        document.getElementById('roleModal').style.display = 'flex';
+    });
+});
+
+// Cerrar modal
+function closeRoleModal() {
+    document.getElementById('roleModal').style.display = 'none';
+}
+document.getElementById('closeModal').addEventListener('click',  closeRoleModal);
+document.getElementById('cancelModal').addEventListener('click', closeRoleModal);
+document.getElementById('roleModal').addEventListener('click', function(e) {
+    if (e.target === this) closeRoleModal();  // click fuera del card
+});
+</script>
 {% endblock %}

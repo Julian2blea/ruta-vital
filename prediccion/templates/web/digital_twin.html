@@ -17,13 +17,8 @@
                 Digital Twin + IoT — Industria 4.0
             </div>
             <div style="color:#94A3B8;font-size:0.82rem;margin-top:3px;line-height:1.5;">
-                <strong style="color:#E2E8F0;">Digital Twin:</strong>
                 La pantalla de simulación de la app móvil es una réplica virtual del glucómetro físico —
                 genera lecturas con los mismos rangos que un sensor real, sin necesidad de hardware.<br>
-                <strong style="color:#E2E8F0;">IoT:</strong>
-                El endpoint <code style="color:#34D399;">/api/telemetry/ingest/</code>
-                recibe transmisiones directas de glucómetros físicos conectados a internet,
-                integrando la cadena sensor → nube → recomendación clínica en tiempo real.
             </div>
         </div>
     </div>
@@ -83,9 +78,8 @@
                     <i class="fas fa-clone me-1"></i> Digital Twin
                 </div>
                 <div style="color:#94A3B8;font-size:0.72rem;line-height:1.5;">
-                    Las lecturas <em>simuladas</em> desde la app móvil son el
-                    <strong style="color:#E2E8F0;">gemelo digital</strong> del glucómetro:
-                    replican su comportamiento con los mismos rangos clínicos ADA sin hardware físico.
+                    Las lecturas simuladas desde la app móvil son el
+                    <strong style="color:#E2E8F0;">gemelo digital</strong> del glucómetro.
                 </div>
             </div>
         </div>
@@ -236,46 +230,6 @@
         Sin transmisiones IoT registradas aún.
     </div>
     {% endif %}
-</div>
-
-<!-- Marco conceptual Industria 4.0 / 5.0 -->
-<div class="row g-3">
-    <div class="col-lg-6">
-        <div class="data-card">
-            <h6 style="color:#34D399;"><i class="fas fa-industry me-2"></i>Industria 4.0 en Ruta Vital</h6>
-            <div style="display:flex;flex-direction:column;gap:14px;margin-top:8px;">
-                {% for item in conceptos_40 %}
-                <div style="display:flex;gap:12px;align-items:flex-start;">
-                    <div class="concept-icon-wrapper" style="background-color: {{ item.bg }};">
-                        <i class="fas fa-{{ item.icon }} concept-icon" style="color: {{ item.color }};"></i>
-                    </div>
-                    <div>
-                        <div class="concept-title">{{ item.title }}</div>
-                        <div class="concept-desc">{{ item.desc }}</div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-    <div class="col-lg-6">
-        <div class="data-card">
-            <h6 style="color:#A78BFA;"><i class="fas fa-heart me-2"></i>Industria 5.0 en Ruta Vital</h6>
-            <div style="display:flex;flex-direction:column;gap:14px;margin-top:8px;">
-                {% for item in conceptos_50 %}
-                <div style="display:flex;gap:12px;align-items:flex-start;">
-                    <div class="concept-icon-wrapper" style="background-color: {{ item.bg }};">
-                        <i class="fas fa-{{ item.icon }} concept-icon" style="color: {{ item.color }};"></i>
-                    </div>
-                    <div>
-                        <div class="concept-title">{{ item.title }}</div>
-                        <div class="concept-desc">{{ item.desc }}</div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
 </div>
 
 {% endblock %}
